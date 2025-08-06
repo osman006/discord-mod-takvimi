@@ -285,7 +285,7 @@ class AutoScheduleManager {
     }
 
     // Müsait moderatörleri getir
-    async getAvailableModerators(date) {
+    async getAvailableModerators(date = null) {
         try {
             const allMods = await this.database.getActiveModerators();
             const punishedUsers = await this.database.getPunishedUsers();

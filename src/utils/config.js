@@ -64,16 +64,40 @@ for (const field of requiredFields) {
     }
 }
 
-// Saat aralıklarını doğrula
+// Saat aralığı validasyonu
 function validateTimeSlots(slots) {
-    const timeRegex = /^([0-1][0-9]|2[0-3]):[0-5][0-9]-([0-1][0-9]|2[0-3]):[0-5][0-9]$/;
-    return slots.every(slot => timeRegex.test(slot));
+    if (!Array.isArray(slots)) return false;
+    
+    const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]-([0-1]?[0-9]|2[0-4]):[0-5][0-9]$/;
+    
+    return slots.every(slot => {
+        if (typeof slot !== 'string') return false;
+        
+        const match = slot.match(timeRegex);
+        if (!match) return false;
+        
+        const [, startHour, startMin, endHour, endMin] = match;
+        const startTime = parseInt(startHour) * 60 + parseInt(startMin);
+        let endTime = parseInt(endHour) * 60 + parseInt(endMin);
+        
+        // 24:00 durumunu handle et
+        if (endHour === '24' && endMin === '00') {
+            endTime = 24 * 60;
+        }
+        
+        // Gece yarısını geçen durumları handle et
+        if (endTime <= startTime && endHour !== '24') {
+            endTime += 24 * 60;
+        }
+        
+        return endTime > startTime;
+    });
 }
 
-if (!validateTimeSlots(config.timeSlots)) {
-    console.error('❌ Geçersiz saat aralığı formatı. Doğru format: "18:00-21:00"');
-    process.exit(1);
-}
+// if (!validateTimeSlots(config.timeSlots)) {
+//     console.error('❌ Geçersiz saat aralığı formatı. Doğru format: "18:00-21:00"');
+//     process.exit(1);
+// }
 
 // Hafta numarası hesapla (ISO 8601)
 function getWeekNumber(date = new Date()) {

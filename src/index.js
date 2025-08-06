@@ -289,14 +289,6 @@ client.once('ready', async () => {
     // Moderatörleri tara
     await scanModerators();
     
-    // Tam otomatik günlük takvim sistemi
-    const FullyAutomaticScheduler = require('./utils/fullyAutomaticScheduler');
-    const autoScheduler = new FullyAutomaticScheduler(client);
-    client.autoScheduler = autoScheduler;
-    
-    // Bugünün takvimini oluştur
-    await autoScheduler.createDailyScheduleAutomatically();
-    
     // Cron job'ları ayarla
     setupCronJobs();
     
