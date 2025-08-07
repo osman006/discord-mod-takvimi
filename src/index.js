@@ -11,19 +11,10 @@ const FullyAutomaticScheduler = require('./utils/fullyAutomaticScheduler');
 // Global değişkenler
 const logger = new Logger(config.logging.level);
 
-// Veritabanı bağlantısı (MySQL/SQLite otomatik seçim)
-const dbType = process.env.DB_TYPE || 'sqlite';
-let database;
-
-if (dbType === 'mysql') {
-    const MySQLDatabase = require('./database/mysql-database');
-    database = new MySQLDatabase();
-    logger.info('🗄️ MySQL veritabanı seçildi');
-} else {
-    const Database = require('./database/database');
-    database = new Database(config.database.path);
-    logger.info('🗄️ SQLite veritabanı seçildi');
-}
+// MySQL Veritabanı Bağlantısı
+const MySQLDatabase = require('./database/mysql-database');
+const database = new MySQLDatabase();
+logger.info('🗄️ MySQL veritabanı sistemi başlatılıyor...');
 let automaticScheduler = null;
 
 // Discord Client oluştur

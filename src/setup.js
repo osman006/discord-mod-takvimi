@@ -111,36 +111,26 @@ async function setup() {
         const dailyScheduleHour = await question('⏰ Günlük takvim kontrolü saati (0-23): ') || '8';
         const surveyTimeoutHours = await question('📝 Günlük anket yanıt süresi (saat): ') || '5';
 
-        // MySQL Veritabanı Ayarları
-        console.log('\n🗄️ MySQL Veritabanı Kurulumu:');
-        const setupMySQL = await question('MySQL veritabanı kullanmak istiyor musunuz? (Y/n): ') || 'y';
+        // MySQL Veritabanı Ayarları (Zorunlu)
+        console.log('\n🗄️ MySQL Veritabanı Kurulumu (Zorunlu):');
+        const dbHost = await question('🌐 MySQL Host (varsayılan localhost): ') || 'localhost';
+        const dbName = await question('🗄️ Veritabanı adı (varsayılan discord_mod_db): ') || 'discord_mod_db';
+        const dbUser = await question('👤 MySQL kullanıcı adı (varsayılan discord_user): ') || 'discord_user';
+        const dbPass = await question('🔒 MySQL şifresi (güçlü bir şifre girin): ') || generateRandomPassword();
         
-        let mysqlConfig = '';
-        if (setupMySQL.toLowerCase() === 'y' || setupMySQL.toLowerCase() === 'yes') {
-            const dbHost = await question('🌐 MySQL Host (varsayılan localhost): ') || 'localhost';
-            const dbName = await question('🗄️ Veritabanı adı (varsayılan discord_mod_db): ') || 'discord_mod_db';
-            const dbUser = await question('👤 MySQL kullanıcı adı (varsayılan discord_user): ') || 'discord_user';
-            const dbPass = await question('🔒 MySQL şifresi (güçlü bir şifre girin): ') || generateRandomPassword();
-            
-            console.log('\n📝 MySQL Bilgileri:');
-            console.log(`   🌐 Host: ${dbHost}`);
-            console.log(`   🗄️ Veritabanı: ${dbName}`);
-            console.log(`   👤 Kullanıcı: ${dbUser}`);
-            console.log(`   🔒 Şifre: ${dbPass}`);
-            console.log('   ⚠️  Bu bilgileri not alın!');
-            
-            mysqlConfig = `
-# MySQL Veritabanı Ayarları
-DB_TYPE=mysql
+        console.log('\n📝 MySQL Bilgileri:');
+        console.log(`   🌐 Host: ${dbHost}`);
+        console.log(`   🗄️ Veritabanı: ${dbName}`);
+        console.log(`   👤 Kullanıcı: ${dbUser}`);
+        console.log(`   🔒 Şifre: ${dbPass}`);
+        console.log('   ⚠️  Bu bilgileri not alın!');
+        
+        const mysqlConfig = `
+# MySQL Veritabanı Ayarları (Zorunlu)
 DB_HOST=${dbHost}
 DB_NAME=${dbName}
 DB_USER=${dbUser}
 DB_PASS=${dbPass}`;
-        } else {
-            mysqlConfig = `
-# SQLite Veritabanı (Varsayılan)
-DB_TYPE=sqlite`;
-        }
 
         // PHP Web Paneli Ayarları
         console.log('\n🌐 PHP Web Yönetim Paneli Kurulumu:');
@@ -204,10 +194,7 @@ LOG_LEVEL=info
 # Otomatik Takvim Sistemi
 AUTO_SCHEDULE_ENABLED=${autoScheduleEnabled.toLowerCase() === 'y' ? 'true' : 'false'}
 DAILY_SCHEDULE_HOUR=${dailyScheduleHour}
-SURVEY_TIMEOUT_HOURS=${surveyTimeoutHours}${mysqlConfig}
-
-# Eski SQLite (yedek için)
-DATABASE_PATH=./data/bot.db${webPanelConfig}
+SURVEY_TIMEOUT_HOURS=${surveyTimeoutHours}${mysqlConfig}${webPanelConfig}
 `;
 
         fs.writeFileSync('.env', envContent);
@@ -216,10 +203,8 @@ DATABASE_PATH=./data/bot.db${webPanelConfig}
         console.log('\n📋 Sonraki adımlar:');
         console.log('1. Bot\'u Discord Developer Portal\'dan sunucunuza davet edin');
         console.log('2. Bot\'a gerekli izinleri verin (Ban Members, Send Messages, vb.)');
-        if (setupMySQL.toLowerCase() === 'y') {
-            console.log('3. MySQL\'de veritabanı ve kullanıcı oluşturun:');
-            console.log('   mysql -u root -p < web-panel/install.sql');
-        }
+        console.log('3. MySQL\'de veritabanı ve kullanıcı oluşturun:');
+        console.log('   mysql -u root -p < web-panel/install.sql');
         console.log('4. npm install komutu ile bağımlılıkları yükleyin');
         console.log('5. npm start komutu ile Discord bot\'u çalıştırın');
         if (setupWebPanel.toLowerCase() === 'y') {
@@ -257,37 +242,24 @@ function generateRandomSecret() {
     return secret;
 }
 
-// Test veritabanı bağlantısı
+// MySQL veritabanı bağlantısını test et
 async function testDatabase() {
     try {
         // .env dosyasını yükle
         require('dotenv').config();
         
-        const dbType = process.env.DB_TYPE || 'sqlite';
+        const MySQLDatabase = require('./database/mysql-database');
+        const db = new MySQLDatabase();
         
-        if (dbType === 'mysql') {
-            const MySQLDatabase = require('./database/mysql-database');
-            const db = new MySQLDatabase();
-            
-            await db.connect();
-            await db.init();
-            await db.close();
-            
-            console.log('✅ MySQL veritabanı bağlantısı başarılı');
-        } else {
-            const Database = require('./database/database');
-            const db = new Database('./data/bot.db');
-            
-            await db.connect();
-            await db.init();
-            await db.close();
-            
-            console.log('✅ SQLite veritabanı bağlantısı başarılı');
-        }
+        await db.connect();
+        await db.init();
+        await db.close();
         
+        console.log('✅ MySQL veritabanı bağlantısı başarılı');
         return true;
     } catch (error) {
-        console.log('❌ Veritabanı hatası:', error.message);
+        console.log('❌ MySQL veritabanı hatası:', error.message);
+        console.log('💡 MySQL sunucusunun çalıştığından ve ayarların doğru olduğundan emin olun');
         return false;
     }
 }

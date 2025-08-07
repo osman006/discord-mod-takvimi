@@ -38,9 +38,12 @@ const config = {
         "20:00-24:00"    // Vardiya 5: 4 saat - Akşam
     ],
 
-    // Veritabanı Ayarları
+    // MySQL Veritabanı Ayarları
     database: {
-        path: process.env.DATABASE_PATH || './data/bot.db'
+        host: process.env.DB_HOST || 'localhost',
+        name: process.env.DB_NAME || 'discord_mod_db',
+        user: process.env.DB_USER || 'discord_user',
+        password: process.env.DB_PASS || ''
     },
 
     // Log Ayarları

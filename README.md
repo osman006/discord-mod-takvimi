@@ -1,193 +1,311 @@
-# Discord Moderatör Takvim Botu
+# 🤖 Discord Moderatör Takvim Botu
 
-Bu bot, Discord sunucusundaki moderatörlerin çalışma takvimini otomatik olarak yönetir.
+Modern ve güvenli Discord moderatör çalışma takvimi otomasyonu. **MySQL veritabanı** ve **PHP web yönetim paneli** ile tam otomatik moderatör vardiya sistemi.
 
-## 🚀 Yeni Özellikler (v2.0)
+## ✨ Özellikler
 
-### ✨ Tam Otomatik Sistem
-- **Otomatik takvim oluşturma**: Her gün saat 8:00'de otomatik olarak takvim kontrolü yapar
-- **Akıllı anket sistemi**: Takvim yoksa otomatik anket gönderir
-- **5 saat süre**: Moderatörlere 5 saat yanıt süresi verir
-- **Otomatik ceza sistemi**: Yanıt vermeyenleri otomatik cezalandırır
-- **Yerine atama**: Gelmeyenler için otomatik yerine moderatör atar
+### 🎯 **Ana Özellikler**
+- ✅ **Otomatik Anket Sistemi** - Haftalık moderatör vardiya anketi
+- ✅ **Akıllı Vardiya Dağılımı** - 5 vardiya (24 saat eşit dağıtım)
+- ✅ **Disiplin Sistemi** - Otomatik ban/timeout sistemi
+- ✅ **Gerçek Zamanlı Takip** - Moderatör aktivite monitoring
+- ✅ **PHP Web Yönetim Paneli** - Komple bot kontrolü
+- ✅ **MySQL Veritabanı** - Performanslı ve güvenli veri saklama
 
-### 🎯 Birleştirilmiş Admin Komutları
-Tüm admin komutları `/admin` altında birleştirildi:
+### 🛡️ **Güvenlik Özellikleri**
+- 🔒 **XSS/CSRF Koruması** - Web panel güvenliği
+- 🔒 **SQL Injection Koruması** - Veritabanı güvenliği  
+- 🔒 **Brute Force Koruması** - Login attempt limiting
+- 🔒 **Rate Limiting** - API abuse koruması
+- 🔒 **Session Security** - Güvenli oturum yönetimi
 
-- `/admin takvim-olustur` - Günlük takvim oluştur
-- `/admin kullanici-izin` - Kullanıcıya özel izin/kısıtlama
-- `/admin kalici-saat` - Kalıcı vardiya atama (bot her zaman aynı saate atar)
-- `/admin saat-degistir` - Kullanıcının saatini değiştir (DM ile bildirir)
-- `/admin mod-ekle` - Sisteme yeni moderatör ekle
-- `/admin modlari-guncelle` - Tüm moderatörleri tara ve güncelle
-- `/admin takvim-gonder` - Moderatörlere anket gönder
-- `/admin takvim-sil` - Belirtilen tarihin takvimini sil
-- `/admin cezali-listesi` - Cezalı kullanıcıları listele
-- `/admin ban-kaldir` - Kullanıcının banını kaldır
-- `/admin stats` - Bot istatistikleri
-- `/admin permissions` - Bot yetkilerini kontrol et
+### 📊 **Vardiya Sistemi**
+```
+🌚 Vardiya 1: 00:00-05:00 (Gece Yarısı)
+🌅 Vardiya 2: 05:00-10:00 (Sabah)
+☀️ Vardiya 3: 10:00-15:00 (Öğlen)
+🌤️ Vardiya 4: 15:00-20:00 (Öğleden Sonra)
+🌆 Vardiya 5: 20:00-24:00 (Akşam-Gece)
+```
 
-### 📊 Gelişmiş Ceza Sistemi
-1. **İlk ihlal**: 2 gün moderatörlük yasağı
-2. **İkinci ihlal**: 1 saat yazma yasağı
-3. **Üçüncü+ ihlal**: 1 gün moderatörlük yasağı
+## 🚀 Hızlı Kurulum
 
-### 📱 Ayrı Kanal Sistemi
-- **Log Kanalı**: Sistem logları (kullanıcı geldi/gelmedi, cezalar vs)
-- **Takvim Kanalı**: Moderatörlerin görebileceği takvim listesi
-- **Admin Kanalı**: Admin bildirimleri
-
-## 📋 Kurulum
-
-### 1. Gereksinimler
-- Node.js 16+
-- Discord Bot Token
-- Ubuntu/Linux (önerilen)
-
-### 2. Kurulum Adımları
-
+### 1️⃣ **Sistem Gereksinimleri**
 ```bash
-# Projeyi klonla
-git clone <repo-url>
-cd discord-mod-schedule-bot
+# Ubuntu/Debian
+sudo apt update
+sudo apt install nodejs npm mysql-server php-fpm php-mysql nginx -y
 
-# Bağımlılıkları yükle
+# Node.js 16+ gerekli
+node --version  # v16.0.0+
+```
+
+### 2️⃣ **Projeyi İndirin**
+```bash
+git clone https://github.com/osman006/discord-mod-takvimi.git
+cd discord-mod-takvimi
 npm install
+```
 
-# Konfigürasyon dosyasını kopyala
+### 3️⃣ **MySQL Kurulumu**
+```bash
+# MySQL'i başlat
+sudo systemctl start mysql
+sudo systemctl enable mysql
+
+# Veritabanı ve kullanıcı oluştur
+mysql -u root -p < web-panel/install.sql
+```
+
+### 4️⃣ **Bot Yapılandırması**
+```bash
+# İnteraktif kurulum
+npm run setup
+
+# Veya manuel olarak
 cp config.example.env .env
-
-# Konfigürasyonu düzenle
 nano .env
 ```
 
-### 3. Konfigürasyon (.env)
+### 5️⃣ **Web Panel Kurulumu**
+```bash
+# Web panel dosyalarını kopyala
+sudo cp -r web-panel/ /var/www/html/
 
-```env
-# Discord Bot Token
-DISCORD_TOKEN=your_bot_token_here
-
-# Discord Server ID
-GUILD_ID=your_server_id_here
-
-# Kanallar (ayrı kanallar için)
-ADMIN_MOD_CHANNEL_ID=your_admin_channel_id
-LOG_CHANNEL_ID=your_log_channel_id
-SCHEDULE_CHANNEL_ID=your_schedule_channel_id
-MOD_SCHEDULE_CHANNEL_ID=your_mod_schedule_channel_id
-
-# Moderatör Rolleri
-MOD_ROLES=MOD,SR MOD,HEAD MOD
-
-# Otomatik Sistem
-AUTO_SCHEDULE_ENABLED=true
-DAILY_SCHEDULE_HOUR=8
-SURVEY_TIMEOUT_HOURS=5
-
-# Ceza Süreleri
-FIRST_VIOLATION_DAYS=2
-SECOND_VIOLATION_DAYS=1
-THIRD_VIOLATION_DAYS=1
-WRITE_TIMEOUT_MINUTES=60
+# Nginx yapılandır
+sudo nano /etc/nginx/sites-available/discord-panel
 ```
 
-### 4. Botu Başlat
-
+### 6️⃣ **Bot'u Başlat**
 ```bash
-# Veritabanını kurulum
-npm run setup
-
-# Botu başlat
+# Development
 npm start
 
-# Geliştirme modu
-npm run dev
+# Production (PM2)
+npm run pm2:start
 ```
 
-## 🔧 Sistem Nasıl Çalışır?
+## ⚙️ Yapılandırma
 
-### Otomatik Takvim Süreci:
-1. **Her gün saat 8:00**: Bot bugün ve yarın için takvim var mı kontrol eder
-2. **Takvim yoksa**: Otomatik olarak tüm moderatörlere anket gönderir
-3. **5 saat süre**: Moderatörler 5 saat içinde yanıt vermeli
-4. **Süre dolunca**: 
-   - Yanıt vermeyenler otomatik cezalandırılır
-   - Yerine başka moderatör atanır
-   - Takvim otomatik oluşturulur ve yayınlanır
+### 🔑 **Discord Bot Ayarları**
+```env
+DISCORD_TOKEN=your_bot_token_here
+GUILD_ID=your_server_id_here
+ADMIN_MOD_CHANNEL_ID=your_admin_channel_id
+```
 
-### Ceza Sistemi:
-- **1. İhlal**: 2 gün moderatörlük yapamaz
-- **2. İhlal**: 1 saat hiçbir yere yazamaz (yazma banı)
-- **3. İhlal**: 1 gün moderatörlük yapamaz
-- **Ceza bitince**: Otomatik kaldırılır ve DM ile bildirilir
+### 🗄️ **MySQL Ayarları**
+```env
+DB_HOST=localhost
+DB_NAME=discord_mod_db
+DB_USER=discord_user
+DB_PASS=your_mysql_password
+```
 
-### Özel Özellikler:
-- **Kalıcı vardiya**: Admin bir kullanıcıya kalıcı saat atayabilir
-- **Zaman kısıtlamaları**: Belirli saatlerde çalışma izni/yasağı
-- **Manuel değişiklik**: Admin istediği zaman saatleri değiştirebilir
-- **Otomatik bildirimler**: Tüm değişiklikler DM ile bildirilir
+### 🌐 **Web Panel Ayarları**
+```env
+ADMIN_USERNAME=admin
+ADMIN_PASSWORD=your_secure_password
+SESSION_TIMEOUT=3600
+MAX_LOGIN_ATTEMPTS=5
+```
 
-## 📊 Veritabanı Tabloları
+## 🎮 Komutlar
 
-Sistem aşağıdaki tabloları kullanır:
-- `moderators` - Moderatör bilgileri
-- `daily_assignments` - Günlük vardiya atamaları
-- `mod_responses` - Anket yanıtları
-- `absent_users` - Cezalı kullanıcılar (gelmeyen tablosu)
-- `permanent_shifts` - Kalıcı vardiya atamaları
-- `user_time_permissions` - Kullanıcı zaman izinleri
-- `schedule_status` - Otomatik takvim durumu
+### 👨‍💼 **Admin Komutları**
+- `/admin moderator-add` - Yeni moderatör ekle
+- `/admin moderator-remove` - Moderatör kaldır
+- `/admin moderator-list` - Moderatör listesi
+- `/admin survey-send` - Manuel anket gönder
+- `/admin survey-results` - Anket sonuçları
+- `/admin discipline-check` - Disiplin durumu
 
-## 🚨 Önemli Notlar
+### 📊 **Moderatör Komutları**
+- `/mod schedule-view` - Vardiya takvimi görüntüle
+- `/mod excuse-submit` - Mazeret bildirimi
+- `/mod status-check` - Kendi durumu kontrol et
 
-1. **Ubuntu'da çalışır**: Sistem Ubuntu/Linux ortamında test edilmiştir
-2. **Otomatik başlatma**: Sistem reboot sonrası otomatik çalışır
-3. **Hata yönetimi**: Tüm hatalar log kanalına bildirilir
-4. **Yedekleme**: Veritabanını düzenli yedekleyin
-5. **Bot yetkileri**: Botun DM gönderme ve kanal mesaj atma yetkisi olmalı
+### ℹ️ **Genel Komutlar**
+- `/help` - Yardım menüsü
+- `/help admin` - Admin komutları
+- `/help mod` - Moderatör komutları
 
-## 🔧 Sorun Giderme
+## 🌐 Web Yönetim Paneli
 
-### Bot çalışmıyor:
+### 📊 **Dashboard Özellikleri**
+- **Bot Durumu** - Gerçek zamanlı bot monitoring
+- **Aktif Moderatörler** - Online/offline durumu
+- **Vardiya Dağılımı** - Günlük/haftalık istatistikler
+- **Sistem Logları** - Detaylı aktivite takibi
+
+### 🛠️ **Admin Panel**
+- **Bot Kontrolü** - Start/stop/restart
+- **Komut Konsolu** - Terminal benzeri bot kontrolü
+- **Veritabanı Yönetimi** - Backup/restore
+- **Güvenlik Logları** - Login attempts, rate limits
+
+### 📈 **İstatistikler**
+- **Moderatör Performansı** - Vardiya katılım oranları
+- **Disiplin Raporları** - Ban/timeout istatistikleri
+- **Sistem Metrikleri** - Memory/CPU kullanımı
+
+## 🔧 Gelişmiş Ayarlar
+
+### ⏰ **Anket Zamanlaması**
+```env
+# Her Pazar 18:00
+SURVEY_CRON=0 0 18 * * 0
+
+# Her Pazartesi 09:00  
+SURVEY_CRON=0 0 9 * * 1
+
+# Her gün 20:00
+SURVEY_CRON=0 0 20 * * *
+```
+
+### 🚫 **Disiplin Sistemi**
+```env
+FIRST_VIOLATION_DAYS=2   # İlk ihlal: 2 gün ban
+SECOND_VIOLATION_DAYS=1  # İkinci ihlal: 1 saat ban
+THIRD_VIOLATION_DAYS=1   # Üçüncü ihlal: 1 gün ban
+WRITE_TIMEOUT_MINUTES=60 # Yazma yasağı: 60 dakika
+```
+
+### 🕐 **Vardiya Özelleştirme**
+```env
+# 5 vardiya (varsayılan)
+TIME_SLOTS=["00:00-05:00","05:00-10:00","10:00-15:00","15:00-20:00","20:00-24:00"]
+
+# 4 vardiya (örnek)
+TIME_SLOTS=["00:00-06:00","06:00-12:00","12:00-18:00","18:00-24:00"]
+
+# 6 vardiya (örnek)
+TIME_SLOTS=["00:00-04:00","04:00-08:00","08:00-12:00","12:00-16:00","16:00-20:00","20:00-24:00"]
+```
+
+## 🔒 Güvenlik
+
+### 🛡️ **Web Panel Güvenliği**
+- **HTTPS Zorunluluğu** - SSL sertifikası gerekli
+- **Session Timeout** - Otomatik oturum sonlandırma
+- **IP Whitelisting** - Belirli IP'lerden erişim
+- **2FA Desteği** - İki faktörlü doğrulama
+
+### 🔐 **Veritabanı Güvenliği**
+- **Prepared Statements** - SQL injection koruması
+- **Encrypted Passwords** - Argon2ID hash algoritması
+- **Connection Encryption** - TLS/SSL bağlantı
+- **Regular Backups** - Otomatik yedekleme
+
+## 📁 Proje Yapısı
+
+```
+discord-mod-takvimi/
+├── src/                    # Bot kaynak kodları
+│   ├── commands/          # Slash komutları
+│   ├── events/            # Discord event handlers
+│   ├── database/          # MySQL veritabanı sınıfı
+│   ├── utils/             # Yardımcı fonksiyonlar
+│   ├── index.js           # Ana bot dosyası
+│   └── setup.js           # İnteraktif kurulum
+├── web-panel/             # PHP web yönetim paneli
+│   ├── config.php         # Panel yapılandırması
+│   ├── security.php       # Güvenlik katmanı
+│   ├── login.php          # Giriş sayfası
+│   ├── dashboard.php      # Ana panel
+│   ├── admin-settings.php # Admin ayarları
+│   └── install.sql        # MySQL kurulum scripti
+├── package.json           # Node.js bağımlılıkları
+├── ecosystem.config.js    # PM2 yapılandırması
+└── config.example.env     # Örnek yapılandırma
+```
+
+## 🐛 Sorun Giderme
+
+### ❌ **Sık Karşılaşılan Hatalar**
+
+**MySQL Bağlantı Hatası:**
 ```bash
-# Logları kontrol et
-tail -f logs/bot.log
+# MySQL servisini kontrol et
+sudo systemctl status mysql
 
-# Veritabanını kontrol et
-sqlite3 data/bot.db ".tables"
+# MySQL'i yeniden başlat
+sudo systemctl restart mysql
 
-# Botu yeniden başlat
-npm restart
+# Kullanıcı izinlerini kontrol et
+mysql -u root -p
+SHOW GRANTS FOR 'discord_user'@'localhost';
 ```
 
-### Anket gönderilmiyor:
-- Bot yetkilerini kontrol edin
-- DM ayarlarını kontrol edin
-- Log kanalını kontrol edin
+**Bot Token Hatası:**
+```bash
+# Token'ı kontrol et
+echo $DISCORD_TOKEN
 
-### Otomatik sistem çalışmıyor:
-- `AUTO_SCHEDULE_ENABLED=true` olduğundan emin olun
-- Cron job'ların çalıştığını kontrol edin
-- Sistem saatini kontrol edin
+# .env dosyasını kontrol et
+cat .env | grep DISCORD_TOKEN
+```
 
-## 📝 Changelog
+**Web Panel 500 Hatası:**
+```bash
+# PHP hata loglarını kontrol et
+sudo tail -f /var/log/nginx/error.log
+sudo tail -f /var/www/html/web-panel/logs/php_errors.log
 
-### v2.0 - Tam Otomatik Sistem
-- ✅ Tüm komutları `/admin` altında birleştirme
-- ✅ Otomatik takvim oluşturma sistemi
-- ✅ 5 saatlik anket süresi
-- ✅ Otomatik ceza sistemi (2 gün → 1 saat → 1 gün)
-- ✅ Gelmeyen kullanıcılar tablosu
-- ✅ Ayrı log ve takvim kanalları
-- ✅ DM bildirim sistemi
-- ✅ Kalıcı vardiya ataması
-- ✅ Kullanıcı zaman izinleri
-- ✅ Otomatik yerine atama sistemi
+# PHP-FPM'i yeniden başlat
+sudo systemctl restart php8.1-fpm
+```
 
-## 📞 Destek
+### 🔍 **Debug Modu**
+```env
+# Development modunu aktif et
+APP_ENV=development
+LOG_LEVEL=debug
+```
 
-Sorunlarınız için GitHub Issues kullanın veya Discord'dan iletişime geçin.
+## 📊 Performans
+
+### 🚀 **Optimizasyon İpuçları**
+- **MySQL InnoDB** - MyISAM yerine InnoDB kullanın
+- **Connection Pooling** - MySQL connection pool ayarları
+- **Redis Cache** - Session ve cache için Redis
+- **Nginx Gzip** - Static dosya sıkıştırma
+
+### 📈 **Monitoring**
+```bash
+# PM2 monitoring
+npm run pm2:monit
+
+# MySQL performans
+mysql -u root -p -e "SHOW PROCESSLIST;"
+
+# Sistem kaynakları
+htop
+```
+
+## 🤝 Katkıda Bulunma
+
+1. Repository'yi fork edin
+2. Feature branch oluşturun (`git checkout -b feature/AmazingFeature`)
+3. Değişikliklerinizi commit edin (`git commit -m 'Add some AmazingFeature'`)
+4. Branch'inizi push edin (`git push origin feature/AmazingFeature`)
+5. Pull Request oluşturun
+
+## 📄 Lisans
+
+Bu proje MIT lisansı altında lisanslanmıştır. Detaylar için [LICENSE](LICENSE) dosyasına bakın.
+
+## 🆘 Destek
+
+- 📧 **Email:** [support@example.com](mailto:support@example.com)
+- 💬 **Discord:** [Discord Sunucusu](https://discord.gg/your-server)
+- 🐛 **Bug Reports:** [GitHub Issues](https://github.com/osman006/discord-mod-takvimi/issues)
+- 📚 **Dokümantasyon:** [Wiki Sayfası](https://github.com/osman006/discord-mod-takvimi/wiki)
+
+## 🎉 Teşekkürler
+
+Bu projeyi kullandığınız için teşekkürler! Discord sunucunuzda moderatör yönetimini otomatikleştirmenin keyfini çıkarın.
 
 ---
 
-**Not**: Bu bot Ubuntu ortamında çalışmak üzere optimize edilmiştir. Diğer işletim sistemlerinde test edilmemiştir. 
+**⭐ Projeyi beğendiyseniz yıldız vermeyi unutmayın!** 
