@@ -17,25 +17,8 @@ module.exports = {
       time: true,
       merge_logs: true,
       log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
-    },
-    {
-      name: 'discord-mod-web',
-      script: 'src/web/server-simple.js',
-      cwd: '/root/Projects/discord-mod-takvimi',
-      instances: 1,
-      autorestart: true,
-      watch: false,
-      max_memory_restart: '512M',
-      env: {
-        NODE_ENV: 'production'
-      },
-      error_file: './logs/web-error.log',
-      out_file: './logs/web-out.log',
-      log_file: './logs/web-combined.log',
-      time: true,
-      merge_logs: true,
-      log_date_format: 'YYYY-MM-DD HH:mm:ss Z'
     }
+    // Web panel kaldırıldı - PHP ile yapılacak
   ],
 
   deploy: {

@@ -1,9 +1,38 @@
+<?php
+require_once 'config.php';
+
+// Zaten giriş yapmışsa dashboard'a yönlendir
+if (isLoggedIn()) {
+    redirect('dashboard.php');
+}
+
+$error = '';
+
+if ($_POST) {
+    $username = $_POST['username'] ?? '';
+    $password = $_POST['password'] ?? '';
+    
+    if ($username === ADMIN_USERNAME && $password === ADMIN_PASSWORD) {
+        $_SESSION['admin_logged_in'] = true;
+        $_SESSION['admin_username'] = $username;
+        $_SESSION['login_time'] = time();
+        
+        // Log giriş
+        error_log("✅ Admin Girişi - Kullanıcı: $username - IP: " . $_SERVER['REMOTE_ADDR']);
+        
+        redirect('dashboard.php');
+    } else {
+        $error = 'Kullanıcı adı veya şifre hatalı!';
+        error_log("❌ Başarısız giriş denemesi - Kullanıcı: $username - IP: " . $_SERVER['REMOTE_ADDR']);
+    }
+}
+?>
 <!DOCTYPE html>
 <html lang="tr">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Giriş Yap - Discord Mod Yönetim</title>
+    <title>Giriş Yap - <?= APP_NAME ?></title>
     
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
@@ -68,12 +97,14 @@
                     </div>
                     
                     <div class="card-body p-4">
-                        <div id="error-alert" class="alert alert-danger d-none" role="alert">
-                            <i class="fas fa-exclamation-triangle me-2"></i>
-                            <span id="error-message"></span>
-                        </div>
+                        <?php if ($error): ?>
+                            <div class="alert alert-danger" role="alert">
+                                <i class="fas fa-exclamation-triangle me-2"></i>
+                                <?= htmlspecialchars($error) ?>
+                            </div>
+                        <?php endif; ?>
                         
-                        <form id="loginForm">
+                        <form method="POST">
                             <div class="mb-3">
                                 <label for="username" class="form-label">
                                     <i class="fas fa-user me-2 text-primary"></i>
@@ -111,7 +142,7 @@
                     <div class="card-footer bg-light text-center border-0" style="border-radius: 0 0 20px 20px;">
                         <small class="text-muted">
                             <i class="fas fa-copyright me-1"></i>
-                            Discord Mod Takvim Sistemi v2.0.0
+                            <?= APP_NAME ?> v<?= APP_VERSION ?>
                         </small>
                     </div>
                 </div>
@@ -123,38 +154,6 @@
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
-        document.getElementById('loginForm').addEventListener('submit', async function(e) {
-            e.preventDefault();
-            
-            const username = document.getElementById('username').value;
-            const password = document.getElementById('password').value;
-            
-            try {
-                const response = await fetch('/api/login', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ username, password })
-                });
-                
-                const result = await response.json();
-                
-                if (result.success) {
-                    window.location.href = '/';
-                } else {
-                    showError(result.error);
-                }
-            } catch (error) {
-                showError('Bağlantı hatası!');
-            }
-        });
-        
-        function showError(message) {
-            document.getElementById('error-message').textContent = message;
-            document.getElementById('error-alert').classList.remove('d-none');
-        }
-        
         // Form otomatik odaklanma
         document.addEventListener('DOMContentLoaded', function() {
             document.getElementById('username').focus();

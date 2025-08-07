@@ -6,12 +6,24 @@ const cron = require('node-cron');
 // Kendi modüllerimiz
 const config = require('./utils/config');
 const Logger = require('./utils/logger');
-const Database = require('./database/database');
 const FullyAutomaticScheduler = require('./utils/fullyAutomaticScheduler');
 
 // Global değişkenler
 const logger = new Logger(config.logging.level);
-const database = new Database(config.database.path);
+
+// Veritabanı bağlantısı (MySQL/SQLite otomatik seçim)
+const dbType = process.env.DB_TYPE || 'sqlite';
+let database;
+
+if (dbType === 'mysql') {
+    const MySQLDatabase = require('./database/mysql-database');
+    database = new MySQLDatabase();
+    logger.info('🗄️ MySQL veritabanı seçildi');
+} else {
+    const Database = require('./database/database');
+    database = new Database(config.database.path);
+    logger.info('🗄️ SQLite veritabanı seçildi');
+}
 let automaticScheduler = null;
 
 // Discord Client oluştur
