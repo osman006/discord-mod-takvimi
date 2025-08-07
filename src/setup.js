@@ -63,6 +63,11 @@ async function setup() {
             return;
         }
 
+        // Ek kanal ayarları
+        const logChannelId = await question(`📋 Log Kanal ID (boş bırakırsanız admin kanal kullanılır): `) || adminChannelId;
+        const scheduleChannelId = await question(`📅 Takvim Kanal ID (boş bırakırsanız admin kanal kullanılır): `) || adminChannelId;
+        const modScheduleChannelId = await question(`🗓️ Moderatör Takvim Kanal ID (boş bırakırsanız takvim kanal kullanılır): `) || scheduleChannelId;
+
         // Moderatör Rolleri
         const modRoles = await question('👥 Moderatör Rolleri (virgülle ayırın, örn: MOD,SR MOD,ADMIN): ') || 'MOD,SR MOD,ADMIN';
 
@@ -78,55 +83,101 @@ async function setup() {
         const responseHours = await question('⏳ Yanıt verme süresi (saat): ') || '24';
 
         // Ban süreleri
-        const firstViolationDays = await question('🚫 İlk ihlal ban süresi (gün): ') || '1';
-        const secondViolationDays = await question('🚫 İkinci+ ihlal ban süresi (gün): ') || '5';
+        const firstViolationDays = await question('🚫 İlk ihlal ban süresi (gün): ') || '2';
+        const secondViolationDays = await question('🚫 İkinci ihlal ban süresi (saat): ') || '1';
+        const thirdViolationDays = await question('🚫 Üçüncü+ ihlal ban süresi (gün): ') || '1';
+        const writeTimeoutMinutes = await question('✍️ Yazma yasağı süresi (dakika): ') || '60';
 
-        // Saat aralıkları
-        console.log('\n🕐 Varsayılan saat aralıkları kullanılsın mı?');
-        console.log('   18:00-21:00, 21:00-24:00, 00:00-03:00, 03:00-06:00,');
-        console.log('   06:00-09:00, 09:00-12:00, 12:00-15:00, 15:00-18:00');
-        const useDefaultSlots = await question('Varsayılan aralıkları kullan? (Y/n): ') || 'y';
+        // Saat aralıkları - YENİ 5 vardiya sistemi
+        console.log('\n🕐 Vardiya sistemi:');
+        console.log('   Yeni 5 vardiya sistemi (24 saat eşit dağıtım):');
+        console.log('   🌚 Vardiya 1: 00:00-05:00 (Gece Yarısı)');
+        console.log('   🌅 Vardiya 2: 05:00-10:00 (Sabah)');
+        console.log('   ☀️ Vardiya 3: 10:00-15:00 (Öğlen)');
+        console.log('   🌤️ Vardiya 4: 15:00-20:00 (Öğleden Sonra)');
+        console.log('   🌆 Vardiya 5: 20:00-24:00 (Akşam-Gece)');
+        const useDefaultSlots = await question('Varsayılan 5 vardiya sistemini kullan? (Y/n): ') || 'y';
         
         let timeSlots;
         if (useDefaultSlots.toLowerCase() === 'y' || useDefaultSlots.toLowerCase() === 'yes') {
-            timeSlots = '["18:00-21:00","21:00-24:00","00:00-03:00","03:00-06:00","06:00-09:00","09:00-12:00","12:00-15:00","15:00-18:00"]';
+            timeSlots = '["00:00-05:00","05:00-10:00","10:00-15:00","15:00-20:00","20:00-24:00"]';
         } else {
             const customSlots = await question('🕐 Özel saat aralıkları (JSON format): ');
-            timeSlots = customSlots || '["18:00-21:00","21:00-24:00"]';
+            timeSlots = customSlots || '["00:00-05:00","05:00-10:00","10:00-15:00","15:00-20:00","20:00-24:00"]';
+        }
+
+        // Otomatik takvim sistemi
+        const autoScheduleEnabled = await question('🤖 Otomatik günlük takvim sistemi aktif olsun mu? (Y/n): ') || 'y';
+        const dailyScheduleHour = await question('⏰ Günlük takvim kontrolü saati (0-23): ') || '8';
+        const surveyTimeoutHours = await question('📝 Günlük anket yanıt süresi (saat): ') || '5';
+
+        // Web Paneli Ayarları
+        console.log('\n🌐 Web Yönetim Paneli Kurulumu:');
+        const setupWebPanel = await question('Web yönetim panelini kurmak istiyor musunuz? (Y/n): ') || 'y';
+        
+        let webPanelConfig = '';
+        if (setupWebPanel.toLowerCase() === 'y' || setupWebPanel.toLowerCase() === 'yes') {
+            const webPort = await question('🌐 Web paneli portu (varsayılan 3000): ') || '3000';
+            const adminUsername = await question('👤 Admin kullanıcı adı (varsayılan admin): ') || 'admin';
+            const adminPassword = await question('🔒 Admin şifresi (güçlü bir şifre girin): ') || generateRandomPassword();
+            const sessionSecret = generateRandomSecret();
+            
+            console.log('\n📝 Web Panel Bilgileri:');
+            console.log(`   🌐 URL: http://localhost:${webPort}`);
+            console.log(`   👤 Kullanıcı: ${adminUsername}`);
+            console.log(`   🔒 Şifre: ${adminPassword}`);
+            console.log('   ⚠️  Bu bilgileri not alın!');
+            
+            await question('\nDevam etmek için Enter\'a basın...');
+            
+            webPanelConfig = `
+# Web Yönetim Paneli Ayarları
+WEB_PORT=${webPort}
+WEB_SESSION_SECRET=${sessionSecret}
+ADMIN_USERNAME=${adminUsername}
+ADMIN_PASSWORD=${adminPassword}
+
+# Web Paneli Güvenlik
+WEB_HTTPS_ENABLED=false
+WEB_RATE_LIMIT=100`;
         }
 
         // .env dosyasını oluştur
-        const envContent = `# Discord Bot Token
-DISCORD_TOKEN=${token}
+        const envContent = `# Discord Moderatör Takvim Sistemi - Otomatik Oluşturulan Ayarlar
+# Oluşturulma Tarihi: ${new Date().toLocaleString('tr-TR')}
 
-# Discord Guild (Server) ID
+# Discord Bot Ayarları
+DISCORD_TOKEN=${token}
 GUILD_ID=${guildId}
 
-# Admin-Mod Channel ID (bot sadece burada mesaj atar)
+# Discord Kanal Ayarları
 ADMIN_MOD_CHANNEL_ID=${adminChannelId}
+LOG_CHANNEL_ID=${logChannelId}
+SCHEDULE_CHANNEL_ID=${scheduleChannelId}
+MOD_SCHEDULE_CHANNEL_ID=${modScheduleChannelId}
 
-# Moderatör Rolleri (virgülle ayırın)
+# Moderatör Ayarları
 MOD_ROLES=${modRoles}
 
-# DM Anket Gönderim Zamanı (Cron format: saniye dakika saat gün ay haftanın_günü)
-# Örnek: Her Pazar 18:00 = "0 0 18 * * 0"
+# Zaman Ayarları
 SURVEY_CRON=${surveyCron}
-
-# Yanıt verme süresi (saat cinsinden)
 RESPONSE_TIMEOUT_HOURS=${responseHours}
 
-# Ban süreleri (gün cinsinden)
+# Ceza Ayarları
 FIRST_VIOLATION_DAYS=${firstViolationDays}
 SECOND_VIOLATION_DAYS=${secondViolationDays}
+THIRD_VIOLATION_DAYS=${thirdViolationDays}
+WRITE_TIMEOUT_MINUTES=${writeTimeoutMinutes}
 
-# Saat aralıkları (JSON format)
+# Sistem Ayarları
 TIME_SLOTS=${timeSlots}
-
-# Veritabanı dosyası
 DATABASE_PATH=./data/bot.db
-
-# Log seviyesi (info, warn, error, debug)
 LOG_LEVEL=info
+
+# Otomatik Takvim Sistemi
+AUTO_SCHEDULE_ENABLED=${autoScheduleEnabled.toLowerCase() === 'y' ? 'true' : 'false'}
+DAILY_SCHEDULE_HOUR=${dailyScheduleHour}
+SURVEY_TIMEOUT_HOURS=${surveyTimeoutHours}${webPanelConfig}
 `;
 
         fs.writeFileSync('.env', envContent);
@@ -135,7 +186,10 @@ LOG_LEVEL=info
         console.log('\n📋 Sonraki adımlar:');
         console.log('1. Bot\'u Discord Developer Portal\'dan sunucunuza davet edin');
         console.log('2. Bot\'a gerekli izinleri verin (Ban Members, Send Messages, vb.)');
-        console.log('3. npm start komutu ile bot\'u çalıştırın');
+        console.log('3. npm start komutu ile Discord bot\'u çalıştırın');
+        if (setupWebPanel.toLowerCase() === 'y') {
+            console.log('4. npm run web komutu ile web panelini başlatın (ayrı terminal)');
+        }
         console.log('\n📚 Detaylı bilgi için README.md dosyasını okuyun');
         console.log('\n🎉 İyi kullanımlar!');
 
@@ -144,6 +198,26 @@ LOG_LEVEL=info
     }
 
     rl.close();
+}
+
+// Rastgele şifre oluştur
+function generateRandomPassword() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*';
+    let password = '';
+    for (let i = 0; i < 12; i++) {
+        password += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return password;
+}
+
+// Rastgele secret oluştur
+function generateRandomSecret() {
+    const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+    let secret = '';
+    for (let i = 0; i < 32; i++) {
+        secret += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return secret;
 }
 
 // Test veritabanı bağlantısı
