@@ -1,6 +1,6 @@
 const sqlite3 = require('sqlite3').verbose();
-const path = require('path');
 const fs = require('fs');
+const path = require('path');
 
 class Database {
     constructor(dbPath = './data/bot.db') {
@@ -848,6 +848,127 @@ class Database {
         
         return new Promise((resolve, reject) => {
             this.db.all(sql, [userId, date], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows || []);
+            });
+        });
+    }
+
+    // Günlük vardiya seçimini kontrol et (kullanıcı zaten seçim yapmış mı?)
+    async getDailyShiftSelection(userId, date) {
+        const sql = `
+            SELECT * FROM daily_assignments 
+            WHERE user_id = ? AND date = ?
+            LIMIT 1
+        `;
+        
+        return new Promise((resolve, reject) => {
+            this.db.get(sql, [userId, date], (err, row) => {
+                if (err) reject(err);
+                else resolve(row || null);
+            });
+        });
+    }
+
+    // Günlük vardiya seçimini kaydet (daily_assignments tablosuna ek olarak ayrı tablo da olabilir)
+    async saveDailyShiftSelection(userId, username, date, slotId) {
+        // Bu fonksiyon daily_assignments tablosuna zaten kaydediliyor olduğu için
+        // ek bir işlem yapmayabiliriz, ama log için kullanabiliriz
+        const slotNames = {
+            'slot1': '🌚 Vardiya 1 - Gece Yarısı (00:00-05:00)',
+            'slot2': '🌅 Vardiya 2 - Sabah (05:00-10:00)',
+            'slot3': '☀️ Vardiya 3 - Öğlen (10:00-15:00)',
+            'slot4': '🌤️ Vardiya 4 - Öğleden Sonra (15:00-20:00)',
+            'slot5': '🌆 Vardiya 5 - Akşam-Gece (20:00-00:00)'
+        };
+
+        // Kullanıcı yanıtlarını da kaydet (mod_responses tablosuna günlük için)
+        const sql = `
+            INSERT OR REPLACE INTO mod_responses 
+            (user_id, username, period, availability, excuse, responded_at)
+            VALUES (?, ?, ?, ?, '', CURRENT_TIMESTAMP)
+        `;
+        
+        const availability = JSON.stringify([slotNames[slotId]]);
+        
+        return new Promise((resolve, reject) => {
+            this.db.run(sql, [userId, username, `daily_${date}`, availability], function(err) {
+                if (err) reject(err);
+                else resolve(this.lastID);
+            });
+        });
+    }
+
+    // Günlük mazeret kaydet
+    async saveDailyExcuse(userId, username, date, excuse) {
+        const sql = `
+            INSERT OR REPLACE INTO mod_responses 
+            (user_id, username, period, availability, excuse, responded_at)
+            VALUES (?, ?, ?, '[]', ?, CURRENT_TIMESTAMP)
+        `;
+        
+        return new Promise((resolve, reject) => {
+            this.db.run(sql, [userId, username, `daily_${date}`, excuse], function(err) {
+                if (err) reject(err);
+                else resolve(this.lastID);
+            });
+        });
+    }
+
+    // Günlük anket için yanıt vermeyen kullanıcıları getir
+    async getUsersWithoutDailyResponse(date) {
+        const sql = `
+            SELECT m.* FROM moderators m
+            WHERE m.is_active = TRUE
+            AND m.user_id NOT IN (
+                SELECT user_id FROM mod_responses 
+                WHERE period = ? 
+                AND responded_at IS NOT NULL
+            )
+            AND m.user_id NOT IN (
+                SELECT user_id FROM daily_assignments 
+                WHERE date = ?
+            )
+        `;
+        
+        return new Promise((resolve, reject) => {
+            this.db.all(sql, [`daily_${date}`, date], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows || []);
+            });
+        });
+    }
+
+    // Belirli tarihteki tüm vardiya atamalarını getir
+    async getDailyAssignments(date) {
+        const sql = `
+            SELECT da.*, m.username, m.display_name
+            FROM daily_assignments da
+            LEFT JOIN moderators m ON da.user_id = m.user_id
+            WHERE da.date = ?
+            ORDER BY da.slot_id ASC
+        `;
+        
+        return new Promise((resolve, reject) => {
+            this.db.all(sql, [date], (err, rows) => {
+                if (err) reject(err);
+                else resolve(rows || []);
+            });
+        });
+    }
+
+    // Belirli tarih için mazeret bildiren kullanıcıları getir
+    async getDailyExcuses(date) {
+        const sql = `
+            SELECT * FROM mod_responses 
+            WHERE period = ? 
+            AND excuse IS NOT NULL 
+            AND excuse != ''
+            ORDER BY responded_at ASC
+        `;
+        
+        return new Promise((resolve, reject) => {
+            this.db.all(sql, [`daily_${date}`], (err, rows) => {
                 if (err) reject(err);
                 else resolve(rows || []);
             });

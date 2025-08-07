@@ -49,7 +49,7 @@ class SurveyManager {
                 .setCustomId(`daily_shift_select_${date}`)
                 .setPlaceholder('Müsait olduğunuz vardiyaları seçin...')
                 .setMinValues(0)
-                .setMaxValues(5)
+                .setMaxValues(1)
                 .addOptions([
                     {
                         label: '🌚 Vardiya 1 - Gece Yarısı',
@@ -441,9 +441,336 @@ class SurveyManager {
             } else if (interaction.isModalSubmit() && interaction.customId.startsWith('excuse_modal_')) {
                 await this.handleExcuseModal(interaction);
             }
+            // Günlük anket interaction'ları
+            else if (interaction.isStringSelectMenu() && interaction.customId.startsWith('daily_shift_select_')) {
+                await this.handleDailyShiftSelection(interaction);
+            } else if (interaction.isButton() && interaction.customId.startsWith('daily_submit_')) {
+                await this.handleDailySubmit(interaction);
+            } else if (interaction.isButton() && interaction.customId.startsWith('daily_excuse_')) {
+                await this.handleDailyExcuse(interaction);
+            } else if (interaction.isModalSubmit() && interaction.customId.startsWith('daily_excuse_modal_')) {
+                await this.handleDailyExcuseModal(interaction);
+            }
         } catch (error) {
             this.logger.error('Interaction handling hatası:', error.message);
         }
+    }
+
+    // Günlük vardiya seçimi handler'ı
+    async handleDailyShiftSelection(interaction) {
+        try {
+            const date = this.extractDateFromDailyId(interaction.customId);
+            const selectedShifts = interaction.values;
+            const userId = interaction.user.id;
+
+            // Kullanıcının bu tarih için zaten seçim yapıp yapmadığını kontrol et
+            const existingSelection = await this.database.getDailyShiftSelection(userId, date);
+            if (existingSelection) {
+                await interaction.reply({
+                    content: '❌ Bu tarih için zaten vardiya seçimi yapmışsınız! Bir kullanıcı sadece bir vardiya seçebilir.',
+                    ephemeral: true
+                });
+                return;
+            }
+
+            // Sadece bir vardiya seçilebilir kısıtlaması
+            if (selectedShifts.length > 1) {
+                await interaction.reply({
+                    content: '❌ Sadece **bir vardiya** seçebilirsiniz! Lütfen tek bir vardiya seçin.',
+                    ephemeral: true
+                });
+                return;
+            }
+
+            if (selectedShifts.length === 0) {
+                const embed = new EmbedBuilder()
+                    .setColor('#ffff00')
+                    .setTitle('⚠️ Vardiya Seçimi')
+                    .setDescription('Hiçbir vardiya seçmediniz. Eğer hiçbir vardiyada müsait değilseniz "Mazeret Belirt" butonunu kullanın.')
+                    .setFooter({ text: 'Lütfen bir seçim yapın!' });
+
+                await interaction.update({ embeds: [embed] });
+                return;
+            }
+
+            const selectedSlot = selectedShifts[0];
+
+            // Seçilen vardiyada zaten atama var mı kontrol et
+            const existingAssignment = await this.database.getAssignmentForSlot(date, selectedSlot);
+            if (existingAssignment) {
+                const slotNames = {
+                    'slot1': '🌚 Vardiya 1 - Gece Yarısı (00:00-05:00)',
+                    'slot2': '🌅 Vardiya 2 - Sabah (05:00-10:00)',
+                    'slot3': '☀️ Vardiya 3 - Öğlen (10:00-15:00)',
+                    'slot4': '🌤️ Vardiya 4 - Öğleden Sonra (15:00-20:00)',
+                    'slot5': '🌆 Vardiya 5 - Akşam-Gece (20:00-00:00)'
+                };
+
+                await interaction.reply({
+                    content: `❌ **${slotNames[selectedSlot]}** vardiyası zaten dolu! Lütfen başka bir vardiya seçin.\n\n🔄 Mevcut atama: **${existingAssignment.username}**`,
+                    ephemeral: true
+                });
+                return;
+            }
+
+            // Geçici seçimi kaydet
+            this.tempDailySelections = this.tempDailySelections || {};
+            this.tempDailySelections[userId] = {
+                date,
+                selectedSlot,
+                timestamp: Date.now()
+            };
+
+            const slotNames = {
+                'slot1': '🌚 Vardiya 1 - Gece Yarısı (00:00-05:00)',
+                'slot2': '🌅 Vardiya 2 - Sabah (05:00-10:00)',
+                'slot3': '☀️ Vardiya 3 - Öğlen (10:00-15:00)',
+                'slot4': '🌤️ Vardiya 4 - Öğleden Sonra (15:00-20:00)',
+                'slot5': '🌆 Vardiya 5 - Akşam-Gece (20:00-00:00)'
+            };
+
+            const embed = new EmbedBuilder()
+                .setColor('#00ff00')
+                .setTitle('✅ Vardiya Seçimi Yapıldı')
+                .setDescription(`**${date}** tarihli takvim için vardiya seçiminiz:`)
+                .addFields({
+                    name: 'Seçtiğiniz Vardiya',
+                    value: `${slotNames[selectedSlot]}`,
+                    inline: false
+                })
+                .setFooter({ text: 'Onaylamak için "✅ Seçimimi Onayla" butonuna basın!' });
+
+            await interaction.update({ embeds: [embed] });
+
+        } catch (error) {
+            this.logger.error('Günlük vardiya seçimi hatası:', error.message);
+            await interaction.reply({
+                content: '❌ Vardiya seçimi sırasında bir hata oluştu. Lütfen tekrar deneyin.',
+                ephemeral: true
+            });
+        }
+    }
+
+    // Günlük vardiya seçimini onayla
+    async handleDailySubmit(interaction) {
+        try {
+            const date = this.extractDateFromDailyId(interaction.customId);
+            const userId = interaction.user.id;
+            const username = interaction.user.username;
+
+            // Geçici seçimi al
+            const tempSelection = this.tempDailySelections?.[userId];
+            if (!tempSelection || tempSelection.date !== date) {
+                await interaction.reply({
+                    content: '❌ Önce bir vardiya seçmeniz gerekiyor!',
+                    ephemeral: true
+                });
+                return;
+            }
+
+            // Tekrar kontrol et - vardiya hala boş mu?
+            const existingAssignment = await this.database.getAssignmentForSlot(date, tempSelection.selectedSlot);
+            if (existingAssignment) {
+                await interaction.reply({
+                    content: '❌ Seçtiğiniz vardiya bu arada başka bir moderatör tarafından alındı! Lütfen farklı bir vardiya seçin.',
+                    ephemeral: true
+                });
+                
+                // Geçici seçimi temizle
+                delete this.tempDailySelections[userId];
+                return;
+            }
+
+            // Veritabanına kaydet
+            await this.database.assignToSlot(date, userId, tempSelection.selectedSlot, 'daily_survey');
+
+            // Kullanıcının seçimini kaydet
+            await this.database.saveDailyShiftSelection(userId, username, date, tempSelection.selectedSlot);
+
+            // Geçici veriyi temizle
+            delete this.tempDailySelections[userId];
+
+            const slotNames = {
+                'slot1': '🌚 Vardiya 1 - Gece Yarısı (00:00-05:00)',
+                'slot2': '🌅 Vardiya 2 - Sabah (05:00-10:00)',
+                'slot3': '☀️ Vardiya 3 - Öğlen (10:00-15:00)',
+                'slot4': '🌤️ Vardiya 4 - Öğleden Sonra (15:00-20:00)',
+                'slot5': '🌆 Vardiya 5 - Akşam-Gece (20:00-00:00)'
+            };
+
+            const embed = new EmbedBuilder()
+                .setColor('#00ff00')
+                .setTitle('🎉 Vardiya Ataması Tamamlandı!')
+                .setDescription(`**${date}** tarihli takvim için vardiya atanız başarıyla kaydedildi.`)
+                .addFields({
+                    name: 'Atandığınız Vardiya',
+                    value: `${slotNames[tempSelection.selectedSlot]}`,
+                    inline: false
+                })
+                .setFooter({ text: 'Teşekkür ederiz! Vardiya saatinizde aktif olmanız beklenmektedir.' })
+                .setTimestamp();
+
+            await interaction.update({ embeds: [embed], components: [] });
+
+            this.logger.info(`${username} kullanıcısı ${date} tarihli ${tempSelection.selectedSlot} vardiyasına atandı`);
+
+            // Admin kanalına bildir
+            await this.notifyAdminAboutAssignment(date, userId, username, tempSelection.selectedSlot);
+
+        } catch (error) {
+            this.logger.error('Günlük vardiya onaylama hatası:', error.message);
+            await interaction.reply({
+                content: '❌ Vardiya ataması sırasında bir hata oluştu. Lütfen tekrar deneyin.',
+                ephemeral: true
+            });
+        }
+    }
+
+    // Günlük mazeret belirtme
+    async handleDailyExcuse(interaction) {
+        try {
+            const date = this.extractDateFromDailyId(interaction.customId);
+
+            // Modal oluştur
+            const modal = new ModalBuilder()
+                .setCustomId(`daily_excuse_modal_${date}`)
+                .setTitle(`${date} Tarihli Mazeret`);
+
+            const excuseInput = new TextInputBuilder()
+                .setCustomId('excuse_text')
+                .setLabel(`${date} tarihinde neden müsait değilsiniz?`)
+                .setStyle(TextInputStyle.Paragraph)
+                .setPlaceholder('Örnek: Sınav var, tatildeyim, hasta olacağım vb.')
+                .setRequired(true)
+                .setMinLength(10)
+                .setMaxLength(500);
+
+            const actionRow = new ActionRowBuilder().addComponents(excuseInput);
+            modal.addComponents(actionRow);
+
+            await interaction.showModal(modal);
+
+        } catch (error) {
+            this.logger.error('Günlük mazeret modal hatası:', error.message);
+            await interaction.reply({
+                content: '❌ Mazeret formu açılırken bir hata oluştu. Lütfen tekrar deneyin.',
+                ephemeral: true
+            });
+        }
+    }
+
+    // Günlük mazeret modal işleme
+    async handleDailyExcuseModal(interaction) {
+        try {
+            const date = this.extractDateFromDailyId(interaction.customId);
+            const excuse = interaction.fields.getTextInputValue('excuse_text');
+            const userId = interaction.user.id;
+            const username = interaction.user.username;
+
+            // Mazereti veritabanına kaydet
+            await this.database.saveDailyExcuse(userId, username, date, excuse);
+
+            const embed = new EmbedBuilder()
+                .setColor('#ff9900')
+                .setTitle('✅ Mazeretiniz Kaydedildi')
+                .setDescription(`**${date}** tarihli takvim için mazeretiniz kaydedildi.`)
+                .addFields({
+                    name: 'Mazeret Sebebiniz',
+                    value: excuse,
+                    inline: false
+                })
+                .setFooter({ text: 'Mazeretiniz değerlendirilecek ve gerekirse size geri dönüş yapılacaktır.' })
+                .setTimestamp();
+
+            await interaction.reply({ embeds: [embed], ephemeral: false });
+
+            this.logger.info(`${username} kullanıcısı ${date} tarihi için mazeret belirtti: ${excuse.substring(0, 50)}...`);
+
+            // Admin kanalına bildir
+            await this.notifyAdminAboutExcuse(date, userId, username, excuse);
+
+        } catch (error) {
+            this.logger.error('Günlük mazeret kaydetme hatası:', error.message);
+            await interaction.reply({
+                content: '❌ Mazeretiniz kaydedilirken bir hata oluştu. Lütfen tekrar deneyin.',
+                ephemeral: true
+            });
+        }
+    }
+
+    // Admin kanalına vardiya atamasını bildir
+    async notifyAdminAboutAssignment(date, userId, username, slotId) {
+        try {
+            const adminChannel = this.client.channels.cache.get(this.config.discord.adminModChannelId);
+            if (!adminChannel) return;
+
+            const slotNames = {
+                'slot1': '🌚 Vardiya 1 - Gece Yarısı (00:00-05:00)',
+                'slot2': '🌅 Vardiya 2 - Sabah (05:00-10:00)',
+                'slot3': '☀️ Vardiya 3 - Öğlen (10:00-15:00)',
+                'slot4': '🌤️ Vardiya 4 - Öğleden Sonra (15:00-20:00)',
+                'slot5': '🌆 Vardiya 5 - Akşam-Gece (20:00-00:00)'
+            };
+
+            const embed = new EmbedBuilder()
+                .setColor('#00ff00')
+                .setTitle('✅ Yeni Vardiya Ataması')
+                .setDescription(`**${date}** tarihli takvimde yeni atama yapıldı.`)
+                .addFields(
+                    {
+                        name: 'Moderatör',
+                        value: `<@${userId}> (${username})`,
+                        inline: true
+                    },
+                    {
+                        name: 'Vardiya',
+                        value: slotNames[slotId],
+                        inline: false
+                    }
+                )
+                .setTimestamp();
+
+            await adminChannel.send({ embeds: [embed] });
+        } catch (error) {
+            this.logger.error('Admin bildirim hatası (atama):', error.message);
+        }
+    }
+
+    // Admin kanalına mazeret bildir
+    async notifyAdminAboutExcuse(date, userId, username, excuse) {
+        try {
+            const adminChannel = this.client.channels.cache.get(this.config.discord.adminModChannelId);
+            if (!adminChannel) return;
+
+            const embed = new EmbedBuilder()
+                .setColor('#ff9900')
+                .setTitle('📝 Yeni Mazeret Bildirimi')
+                .setDescription(`**${date}** tarihli takvim için mazeret bildirildi.`)
+                .addFields(
+                    {
+                        name: 'Moderatör',
+                        value: `<@${userId}> (${username})`,
+                        inline: true
+                    },
+                    {
+                        name: 'Mazeret',
+                        value: excuse.substring(0, 1000),
+                        inline: false
+                    }
+                )
+                .setTimestamp();
+
+            await adminChannel.send({ embeds: [embed] });
+        } catch (error) {
+            this.logger.error('Admin bildirim hatası (mazeret):', error.message);
+        }
+    }
+
+    // Tarih çıkarma yardımcı fonksiyonu (günlük anketler için)
+    extractDateFromDailyId(customId) {
+        // "daily_shift_select_2025-08-07" -> "2025-08-07"
+        const parts = customId.split('_');
+        return parts[parts.length - 1];
     }
 }
 

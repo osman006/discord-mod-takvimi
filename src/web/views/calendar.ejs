@@ -1,0 +1,362 @@
+<%- include('layout', {body: `
+<!-- Tarih Seçici ve Kontroller -->
+<div class="row mb-4">
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-calendar-alt me-2"></i>
+                    Tarih Seçimi
+                </h5>
+                <form method="GET" action="/calendar" class="d-flex gap-2">
+                    <input type="date" name="date" value="${selectedDate}" class="form-control">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-search"></i>
+                    </button>
+                </form>
+            </div>
+        </div>
+    </div>
+    
+    <div class="col-md-6">
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">
+                    <i class="fas fa-tools me-2"></i>
+                    Hızlı İşlemler
+                </h5>
+                <div class="btn-group w-100" role="group">
+                    <button class="btn btn-success" onclick="createSchedule('${selectedDate}')">
+                        <i class="fas fa-plus me-1"></i>
+                        Takvim Oluştur
+                    </button>
+                    <button class="btn btn-info" onclick="sendDailySurvey('${selectedDate}')">
+                        <i class="fas fa-paper-plane me-1"></i>
+                        Anket Gönder
+                    </button>
+                    <button class="btn btn-warning" onclick="clearSchedule('${selectedDate}')">
+                        <i class="fas fa-trash me-1"></i>
+                        Temizle
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Vardiya Durumu -->
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-clock me-2"></i>
+                    ${moment(selectedDate).format('DD MMMM YYYY dddd')} - Vardiya Durumu
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <% 
+                    const slotInfo = [
+                        { id: 'slot1', name: 'Vardiya 1 - Gece Yarısı', time: '00:00-05:00', emoji: '🌚', color: 'primary' },
+                        { id: 'slot2', name: 'Vardiya 2 - Sabah', time: '05:00-10:00', emoji: '🌅', color: 'info' },
+                        { id: 'slot3', name: 'Vardiya 3 - Öğlen', time: '10:00-15:00', emoji: '☀️', color: 'warning' },
+                        { id: 'slot4', name: 'Vardiya 4 - Öğleden Sonra', time: '15:00-20:00', emoji: '🌤️', color: 'success' },
+                        { id: 'slot5', name: 'Vardiya 5 - Akşam-Gece', time: '20:00-00:00', emoji: '🌆', color: 'secondary' }
+                    ];
+                    %>
+                    
+                    <% slotInfo.forEach(slot => { %>
+                        <div class="col-md-4 col-lg-2 mb-3">
+                            <% 
+                            const assignment = assignments.find(a => a.slot_id === slot.id);
+                            %>
+                            <div class="card h-100 slot-card" data-slot="${slot.id}">
+                                <div class="card-header bg-${slot.color} text-white text-center py-2">
+                                    <div class="h4 mb-0">${slot.emoji}</div>
+                                    <small>${slot.time}</small>
+                                </div>
+                                <div class="card-body p-2 text-center">
+                                    <h6 class="card-title small">${slot.name}</h6>
+                                    <% if (assignment) { %>
+                                        <div class="assigned-user">
+                                            <div class="avatar mb-2">
+                                                <i class="fas fa-user-circle fa-2x text-${slot.color}"></i>
+                                            </div>
+                                            <div class="user-info">
+                                                <strong class="d-block">${assignment.username}</strong>
+                                                <small class="text-muted">${assignment.display_name || ''}</small>
+                                            </div>
+                                            <div class="mt-2">
+                                                <% if (assignment.assignment_type === 'automatic') { %>
+                                                    <span class="badge bg-success">Otomatik</span>
+                                                <% } else if (assignment.assignment_type === 'manual_web') { %>
+                                                    <span class="badge bg-primary">Web</span>
+                                                <% } else if (assignment.assignment_type === 'daily_survey') { %>
+                                                    <span class="badge bg-info">Anket</span>
+                                                <% } else { %>
+                                                    <span class="badge bg-secondary">Manuel</span>
+                                                <% } %>
+                                            </div>
+                                            <div class="mt-2">
+                                                <button class="btn btn-sm btn-outline-danger" onclick="removeAssignment('${assignment.id}', '${slot.id}')">
+                                                    <i class="fas fa-times"></i>
+                                                </button>
+                                            </div>
+                                        </div>
+                                    <% } else { %>
+                                        <div class="empty-slot">
+                                            <i class="fas fa-plus-circle fa-2x text-muted mb-2"></i>
+                                            <p class="text-muted small mb-2">Boş</p>
+                                            <button class="btn btn-sm btn-outline-${slot.color}" onclick="showAssignModal('${slot.id}', '${slot.name}')">
+                                                <i class="fas fa-plus me-1"></i>
+                                                Ata
+                                            </button>
+                                        </div>
+                                    <% } %>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Mazeretler -->
+<% if (excuses.length > 0) { %>
+<div class="row mb-4">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5 class="mb-0">
+                    <i class="fas fa-exclamation-triangle me-2"></i>
+                    Mazeretler (${excuses.length})
+                </h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <% excuses.forEach(excuse => { %>
+                        <div class="col-md-6 mb-3">
+                            <div class="card border-warning">
+                                <div class="card-body">
+                                    <div class="d-flex align-items-center mb-2">
+                                        <i class="fas fa-user-circle fa-lg text-warning me-2"></i>
+                                        <div>
+                                            <strong>${excuse.username}</strong>
+                                            <small class="text-muted d-block">${moment(excuse.responded_at).format('HH:mm')}</small>
+                                        </div>
+                                    </div>
+                                    <p class="mb-0 small">${excuse.excuse}</p>
+                                </div>
+                            </div>
+                        </div>
+                    <% }); %>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+<% } %>
+
+<!-- Manuel Atama Modal -->
+<div class="modal fade" id="assignModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Manuel Vardiya Ataması</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form id="assignForm">
+                    <input type="hidden" id="assignSlotId" name="slotId">
+                    <input type="hidden" id="assignDate" name="date" value="${selectedDate}">
+                    
+                    <div class="mb-3">
+                        <label class="form-label">Vardiya</label>
+                        <input type="text" id="assignSlotName" class="form-control" readonly>
+                    </div>
+                    
+                    <div class="mb-3">
+                        <label for="assignUserId" class="form-label">Moderatör Seçin</label>
+                        <select class="form-select" id="assignUserId" name="userId" required>
+                            <option value="">-- Moderatör Seçin --</option>
+                            <% moderators.forEach(mod => { %>
+                                <option value="${mod.user_id}">${mod.username} (${mod.display_name || 'İsim yok'})</option>
+                            <% }); %>
+                        </select>
+                    </div>
+                </form>
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">İptal</button>
+                <button type="button" class="btn btn-primary" onclick="submitAssignment()">Ata</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.slot-card {
+    transition: transform 0.2s;
+    cursor: pointer;
+}
+.slot-card:hover {
+    transform: translateY(-2px);
+}
+.assigned-user {
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+}
+.empty-slot {
+    min-height: 120px;
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+}
+</style>
+
+<script>
+// Modal fonksiyonları
+function showAssignModal(slotId, slotName) {
+    document.getElementById('assignSlotId').value = slotId;
+    document.getElementById('assignSlotName').value = slotName;
+    new bootstrap.Modal(document.getElementById('assignModal')).show();
+}
+
+// Manuel atama
+async function submitAssignment() {
+    const form = document.getElementById('assignForm');
+    const formData = new FormData(form);
+    
+    try {
+        const response = await fetch('/api/assignment/manual', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                date: formData.get('date'),
+                userId: formData.get('userId'),
+                slotId: formData.get('slotId')
+            })
+        });
+        
+        const result = await response.json();
+        
+        if (result.success) {
+            showNotification('Atama başarılı!', 'success');
+            bootstrap.Modal.getInstance(document.getElementById('assignModal')).hide();
+            setTimeout(() => location.reload(), 1000);
+        } else {
+            showNotification('Hata: ' + result.error, 'error');
+        }
+    } catch (error) {
+        showNotification('Bağlantı hatası!', 'error');
+    }
+}
+
+// Atama silme
+async function removeAssignment(assignmentId, slotId) {
+    if (confirm('Bu atamayı silmek istediğinizden emin misiniz?')) {
+        try {
+            const response = await fetch(\`/api/assignment/\${assignmentId}\`, {
+                method: 'DELETE'
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showNotification('Atama silindi!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification('Hata: ' + result.error, 'error');
+            }
+        } catch (error) {
+            showNotification('Bağlantı hatası!', 'error');
+        }
+    }
+}
+
+// Takvim oluşturma
+async function createSchedule(date) {
+    if (confirm(\`\${date} tarihli takvim oluşturulsun mu?\`)) {
+        try {
+            const response = await fetch('/api/schedule/create', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ date })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showNotification('Takvim oluşturuldu!', 'success');
+                setTimeout(() => location.reload(), 2000);
+            } else {
+                showNotification('Hata: ' + result.error, 'error');
+            }
+        } catch (error) {
+            showNotification('Bağlantı hatası!', 'error');
+        }
+    }
+}
+
+// Günlük anket gönderme
+async function sendDailySurvey(date) {
+    if (confirm(\`\${date} tarihli günlük anket gönderilsin mi?\`)) {
+        try {
+            const response = await fetch('/api/survey/daily', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ date })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showNotification('Anket gönderildi!', 'success');
+            } else {
+                showNotification('Hata: ' + result.error, 'error');
+            }
+        } catch (error) {
+            showNotification('Bağlantı hatası!', 'error');
+        }
+    }
+}
+
+// Takvim temizleme
+async function clearSchedule(date) {
+    if (confirm(\`\${date} tarihli tüm atamalar silinsin mi? Bu işlem geri alınamaz!\`)) {
+        try {
+            const response = await fetch('/api/schedule/clear', {
+                method: 'DELETE',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ date })
+            });
+            
+            const result = await response.json();
+            
+            if (result.success) {
+                showNotification('Takvim temizlendi!', 'success');
+                setTimeout(() => location.reload(), 1000);
+            } else {
+                showNotification('Hata: ' + result.error, 'error');
+            }
+        } catch (error) {
+            showNotification('Bağlantı hatası!', 'error');
+        }
+    }
+}
+</script>
+`}) %> 

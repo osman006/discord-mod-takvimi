@@ -6,7 +6,9 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "setup": "node src/setup.js"
+    "setup": "node src/setup.js",
+    "web": "node src/web/server.js",
+    "dev-web": "nodemon src/web/server.js"
   },
   "keywords": ["discord", "bot", "moderator", "schedule", "automation"],
   "author": "",
@@ -15,7 +17,15 @@
     "discord.js": "^14.14.1",
     "sqlite3": "^5.1.6",
     "node-cron": "^3.0.3",
-    "dotenv": "^16.3.1"
+    "dotenv": "^16.3.1",
+    "express": "^4.18.2",
+    "ejs": "^3.1.9",
+    "socket.io": "^4.7.4",
+    "multer": "^1.4.5-lts.1",
+    "bcryptjs": "^2.4.3",
+    "express-session": "^1.17.3",
+    "moment": "^2.29.4",
+    "chart.js": "^4.4.0"
   },
   "devDependencies": {
     "nodemon": "^3.0.2"

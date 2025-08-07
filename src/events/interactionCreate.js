@@ -57,6 +57,10 @@ module.exports = {
                 const surveyIds = ['time_select_', 'confirm_availability_', 'not_available_', 'excuse_modal_'];
                 const isSurveyInteraction = surveyIds.some(id => interaction.customId.includes(id));
                 
+                // Günlük anket ile ilgili interaction'ları kontrol et
+                const dailySurveyIds = ['daily_shift_select_', 'daily_submit_', 'daily_excuse_', 'daily_excuse_modal_'];
+                const isDailySurveyInteraction = dailySurveyIds.some(id => interaction.customId.includes(id));
+                
                 // Takvim ile ilgili interaction'ları kontrol et
                 const scheduleIds = ['refresh_schedule_', 'export_schedule_'];
                 const isScheduleInteraction = scheduleIds.some(id => interaction.customId.includes(id));
@@ -65,7 +69,7 @@ module.exports = {
                 const dailyModIds = ['reselect_daily_', 'manual_assign_'];
                 const isDailyModInteraction = dailyModIds.some(id => interaction.customId.includes(id));
                 
-                if (isSurveyInteraction) {
+                if (isSurveyInteraction || isDailySurveyInteraction) {
                     const surveyManager = new SurveyManager(client);
                     await surveyManager.handleInteraction(interaction);
                 } else if (isScheduleInteraction) {
