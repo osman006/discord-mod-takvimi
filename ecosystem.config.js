@@ -20,7 +20,7 @@ module.exports = {
     },
     {
       name: 'discord-mod-web',
-      script: 'src/web/server.js',
+      script: 'src/web/server-simple.js',
       cwd: '/root/Projects/discord-mod-takvimi',
       instances: 1,
       autorestart: true,
