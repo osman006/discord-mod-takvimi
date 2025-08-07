@@ -5,6 +5,9 @@ const http = require('http');
 const socketIo = require('socket.io');
 const fs = require('fs');
 
+// Çevre değişkenlerini yükle
+require('dotenv').config();
+
 // Bot bileşenlerini import et
 const Database = require('../database/database');
 
@@ -16,19 +19,21 @@ const io = socketIo(server);
 const database = new Database();
 
 // Middleware
-app.use(express.json());
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ extended: true, limit: '10mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 
-// Session yapılandırması
+// Session yapılandırması - Production için optimize
 app.use(session({
-    secret: process.env.WEB_SESSION_SECRET || 'discord-mod-panel-secret-key',
+    secret: process.env.WEB_SESSION_SECRET || 'discord-mod-panel-secret-key-' + Date.now(),
     resave: false,
     saveUninitialized: false,
     cookie: { 
-        secure: false,
-        maxAge: 24 * 60 * 60 * 1000 // 24 saat
-    }
+        secure: false, // HTTPS kullanıyorsanız true yapın
+        maxAge: 24 * 60 * 60 * 1000, // 24 saat
+        httpOnly: true // XSS koruması
+    },
+    name: 'discord-mod-session' // Varsayılan session adını değiştir
 }));
 
 // Auth middleware
@@ -50,28 +55,47 @@ app.get('/login.html', (req, res) => {
     res.sendFile(path.join(__dirname, 'public', 'login.html'));
 });
 
-// Login işlemi
+// Login işlemi - .env'den bilgileri al
 app.post('/api/login', async (req, res) => {
     const { username, password } = req.body;
     
-    const adminUsername = process.env.ADMIN_USERNAME || 'admin';
-    const adminPassword = process.env.ADMIN_PASSWORD || 'admin123';
+    // .env dosyasından admin bilgilerini al
+    const adminUsername = process.env.ADMIN_USERNAME;
+    const adminPassword = process.env.ADMIN_PASSWORD;
+    
+    // Eğer .env'de yoksa hata ver
+    if (!adminUsername || !adminPassword) {
+        console.log('❌ Admin bilgileri .env dosyasında bulunamadı!');
+        return res.json({ 
+            success: false, 
+            error: 'Sunucu yapılandırması eksik! Lütfen .env dosyasını kontrol edin.' 
+        });
+    }
     
     if (username === adminUsername && password === adminPassword) {
         req.session.authenticated = true;
         req.session.username = username;
-        console.log(`📊 Admin Girişi - Kullanıcı: ${username}`);
+        req.session.loginTime = new Date().toISOString();
+        
+        console.log(`📊 Admin Girişi - Kullanıcı: ${username} - IP: ${req.ip} - Zaman: ${req.session.loginTime}`);
         res.json({ success: true });
     } else {
-        console.log(`❌ Başarısız giriş denemesi - Kullanıcı: ${username}`);
+        console.log(`❌ Başarısız giriş denemesi - Kullanıcı: ${username} - IP: ${req.ip}`);
         res.json({ success: false, error: 'Kullanıcı adı veya şifre hatalı!' });
     }
 });
 
 // Logout
 app.post('/api/logout', (req, res) => {
-    req.session.destroy();
-    res.json({ success: true });
+    const username = req.session.username;
+    req.session.destroy((err) => {
+        if (err) {
+            console.log('Logout hatası:', err);
+        } else {
+            console.log(`📊 Admin Çıkışı - Kullanıcı: ${username}`);
+        }
+        res.json({ success: true });
+    });
 });
 
 // Dashboard verileri API
@@ -321,18 +345,57 @@ const PORT = process.env.WEB_PORT || 6060;
 
 async function startWebServer() {
     try {
+        // Veritabanı bağlantısı ve optimizasyon
         await database.connect();
         await database.init();
         
-        server.listen(PORT, () => {
+        // SQLite optimizasyon ayarları
+        await database.run('PRAGMA journal_mode = WAL;'); // Write-Ahead Logging
+        await database.run('PRAGMA synchronous = NORMAL;'); // Daha hızlı yazma
+        await database.run('PRAGMA cache_size = 10000;'); // Daha büyük cache
+        await database.run('PRAGMA temp_store = MEMORY;'); // Temp veriler RAM'de
+        await database.run('PRAGMA mmap_size = 268435456;'); // Memory mapping (256MB)
+        
+        console.log('🔧 SQLite optimizasyon ayarları uygulandı');
+        
+        // Admin bilgilerini kontrol et
+        const adminUsername = process.env.ADMIN_USERNAME;
+        const adminPassword = process.env.ADMIN_PASSWORD;
+        
+        if (!adminUsername || !adminPassword) {
+            console.log('⚠️  UYARI: .env dosyasında ADMIN_USERNAME veya ADMIN_PASSWORD bulunamadı!');
+            console.log('📝 Lütfen .env dosyasına şu satırları ekleyin:');
+            console.log('   ADMIN_USERNAME=admin');
+            console.log('   ADMIN_PASSWORD=your_secure_password');
+        } else {
+            console.log(`👤 Admin kullanıcısı: ${adminUsername}`);
+            console.log(`🔐 Şifre uzunluğu: ${adminPassword.length} karakter`);
+        }
+        
+        server.listen(PORT, '0.0.0.0', () => {
             console.log(`🌐 Web Yönetim Paneli başlatıldı: http://localhost:${PORT}`);
-            console.log(`📊 Admin Girişi - Kullanıcı: ${process.env.ADMIN_USERNAME || 'admin'}`);
+            console.log(`🔗 Dış erişim: http://YOUR_SERVER_IP:${PORT}`);
+            console.log(`📊 Session süresi: 24 saat`);
+            console.log(`🔒 Güvenlik: Session tabanlı authentication`);
         });
     } catch (error) {
-        console.error('Web sunucu başlatma hatası:', error);
+        console.error('❌ Web sunucu başlatma hatası:', error);
         process.exit(1);
     }
 }
+
+// Graceful shutdown
+process.on('SIGTERM', async () => {
+    console.log('🔄 Web sunucu kapatılıyor...');
+    await database.close();
+    process.exit(0);
+});
+
+process.on('SIGINT', async () => {
+    console.log('🔄 Web sunucu kapatılıyor...');
+    await database.close();
+    process.exit(0);
+});
 
 startWebServer();
 
