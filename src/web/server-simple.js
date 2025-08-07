@@ -211,7 +211,7 @@ io.on('connection', (socket) => {
 });
 
 // Sunucuyu başlat
-const PORT = process.env.WEB_PORT || 3000;
+const PORT = process.env.WEB_PORT || 6060;
 
 async function startWebServer() {
     try {
