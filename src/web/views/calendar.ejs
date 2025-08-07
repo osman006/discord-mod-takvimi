@@ -9,7 +9,7 @@
                     Tarih Seçimi
                 </h5>
                 <form method="GET" action="/calendar" class="d-flex gap-2">
-                    <input type="date" name="date" value="${selectedDate}" class="form-control">
+                    <input type="date" name="date" value="<%= selectedDate %>" class="form-control">
                     <button type="submit" class="btn btn-primary">
                         <i class="fas fa-search"></i>
                     </button>
@@ -26,15 +26,15 @@
                     Hızlı İşlemler
                 </h5>
                 <div class="btn-group w-100" role="group">
-                    <button class="btn btn-success" onclick="createSchedule('${selectedDate}')">
+                    <button class="btn btn-success" onclick="createSchedule('<%= selectedDate %>')">
                         <i class="fas fa-plus me-1"></i>
                         Takvim Oluştur
                     </button>
-                    <button class="btn btn-info" onclick="sendDailySurvey('${selectedDate}')">
+                    <button class="btn btn-info" onclick="sendDailySurvey('<%= selectedDate %>')">
                         <i class="fas fa-paper-plane me-1"></i>
                         Anket Gönder
                     </button>
-                    <button class="btn btn-warning" onclick="clearSchedule('${selectedDate}')">
+                    <button class="btn btn-warning" onclick="clearSchedule('<%= selectedDate %>')">
                         <i class="fas fa-trash me-1"></i>
                         Temizle
                     </button>
@@ -51,7 +51,7 @@
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="fas fa-clock me-2"></i>
-                    ${moment(selectedDate).format('DD MMMM YYYY dddd')} - Vardiya Durumu
+                    <%= moment(selectedDate).format('DD MMMM YYYY dddd') %> - Vardiya Durumu
                 </h5>
             </div>
             <div class="card-body">
@@ -71,21 +71,21 @@
                             <% 
                             const assignment = assignments.find(a => a.slot_id === slot.id);
                             %>
-                            <div class="card h-100 slot-card" data-slot="${slot.id}">
-                                <div class="card-header bg-${slot.color} text-white text-center py-2">
-                                    <div class="h4 mb-0">${slot.emoji}</div>
-                                    <small>${slot.time}</small>
+                            <div class="card h-100 slot-card" data-slot="<%= slot.id %>">
+                                <div class="card-header bg-<%= slot.color %> text-white text-center py-2">
+                                    <div class="h4 mb-0"><%= slot.emoji %></div>
+                                    <small><%= slot.time %></small>
                                 </div>
                                 <div class="card-body p-2 text-center">
-                                    <h6 class="card-title small">${slot.name}</h6>
+                                    <h6 class="card-title small"><%= slot.name %></h6>
                                     <% if (assignment) { %>
                                         <div class="assigned-user">
                                             <div class="avatar mb-2">
-                                                <i class="fas fa-user-circle fa-2x text-${slot.color}"></i>
+                                                <i class="fas fa-user-circle fa-2x text-<%= slot.color %>"></i>
                                             </div>
                                             <div class="user-info">
-                                                <strong class="d-block">${assignment.username}</strong>
-                                                <small class="text-muted">${assignment.display_name || ''}</small>
+                                                <strong class="d-block"><%= assignment.username %></strong>
+                                                <small class="text-muted"><%= assignment.display_name || '' %></small>
                                             </div>
                                             <div class="mt-2">
                                                 <% if (assignment.assignment_type === 'automatic') { %>
@@ -99,7 +99,7 @@
                                                 <% } %>
                                             </div>
                                             <div class="mt-2">
-                                                <button class="btn btn-sm btn-outline-danger" onclick="removeAssignment('${assignment.id}', '${slot.id}')">
+                                                <button class="btn btn-sm btn-outline-danger" onclick="removeAssignment('<%= assignment.id %>', '<%= slot.id %>')">
                                                     <i class="fas fa-times"></i>
                                                 </button>
                                             </div>
@@ -108,7 +108,7 @@
                                         <div class="empty-slot">
                                             <i class="fas fa-plus-circle fa-2x text-muted mb-2"></i>
                                             <p class="text-muted small mb-2">Boş</p>
-                                            <button class="btn btn-sm btn-outline-${slot.color}" onclick="showAssignModal('${slot.id}', '${slot.name}')">
+                                            <button class="btn btn-sm btn-outline-<%= slot.color %>" onclick="showAssignModal('<%= slot.id %>', '<%= slot.name %>')">
                                                 <i class="fas fa-plus me-1"></i>
                                                 Ata
                                             </button>
@@ -132,7 +132,7 @@
             <div class="card-header">
                 <h5 class="mb-0">
                     <i class="fas fa-exclamation-triangle me-2"></i>
-                    Mazeretler (${excuses.length})
+                    Mazeretler (<%= excuses.length %>)
                 </h5>
             </div>
             <div class="card-body">
@@ -144,11 +144,11 @@
                                     <div class="d-flex align-items-center mb-2">
                                         <i class="fas fa-user-circle fa-lg text-warning me-2"></i>
                                         <div>
-                                            <strong>${excuse.username}</strong>
-                                            <small class="text-muted d-block">${moment(excuse.responded_at).format('HH:mm')}</small>
+                                            <strong><%= excuse.username %></strong>
+                                            <small class="text-muted d-block"><%= moment(excuse.responded_at).format('HH:mm') %></small>
                                         </div>
                                     </div>
-                                    <p class="mb-0 small">${excuse.excuse}</p>
+                                    <p class="mb-0 small"><%= excuse.excuse %></p>
                                 </div>
                             </div>
                         </div>
@@ -171,7 +171,7 @@
             <div class="modal-body">
                 <form id="assignForm">
                     <input type="hidden" id="assignSlotId" name="slotId">
-                    <input type="hidden" id="assignDate" name="date" value="${selectedDate}">
+                    <input type="hidden" id="assignDate" name="date" value="<%= selectedDate %>">
                     
                     <div class="mb-3">
                         <label class="form-label">Vardiya</label>
@@ -183,7 +183,7 @@
                         <select class="form-select" id="assignUserId" name="userId" required>
                             <option value="">-- Moderatör Seçin --</option>
                             <% moderators.forEach(mod => { %>
-                                <option value="${mod.user_id}">${mod.username} (${mod.display_name || 'İsim yok'})</option>
+                                <option value="<%= mod.user_id %>"><%= mod.username %> (<%= mod.display_name || 'İsim yok' %>)</option>
                             <% }); %>
                         </select>
                     </div>
@@ -264,7 +264,7 @@ async function submitAssignment() {
 async function removeAssignment(assignmentId, slotId) {
     if (confirm('Bu atamayı silmek istediğinizden emin misiniz?')) {
         try {
-            const response = await fetch(\`/api/assignment/\${assignmentId}\`, {
+            const response = await fetch('/api/assignment/' + assignmentId, {
                 method: 'DELETE'
             });
             
@@ -284,7 +284,7 @@ async function removeAssignment(assignmentId, slotId) {
 
 // Takvim oluşturma
 async function createSchedule(date) {
-    if (confirm(\`\${date} tarihli takvim oluşturulsun mu?\`)) {
+    if (confirm(date + ' tarihli takvim oluşturulsun mu?')) {
         try {
             const response = await fetch('/api/schedule/create', {
                 method: 'POST',
@@ -310,7 +310,7 @@ async function createSchedule(date) {
 
 // Günlük anket gönderme
 async function sendDailySurvey(date) {
-    if (confirm(\`\${date} tarihli günlük anket gönderilsin mi?\`)) {
+    if (confirm(date + ' tarihli günlük anket gönderilsin mi?')) {
         try {
             const response = await fetch('/api/survey/daily', {
                 method: 'POST',
@@ -335,7 +335,7 @@ async function sendDailySurvey(date) {
 
 // Takvim temizleme
 async function clearSchedule(date) {
-    if (confirm(\`\${date} tarihli tüm atamalar silinsin mi? Bu işlem geri alınamaz!\`)) {
+    if (confirm(date + ' tarihli tüm atamalar silinsin mi? Bu işlem geri alınamaz!')) {
         try {
             const response = await fetch('/api/schedule/clear', {
                 method: 'DELETE',

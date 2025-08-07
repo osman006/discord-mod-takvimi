@@ -7,7 +7,7 @@
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-uppercase mb-1">Toplam Moderatör</div>
-                        <div class="h5 mb-0 font-weight-bold">${stats.totalModerators}</div>
+                        <div class="h5 mb-0 font-weight-bold"><%= stats.totalModerators %></div>
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-users fa-2x opacity-75"></i>
@@ -23,7 +23,7 @@
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-uppercase mb-1">Bugünkü Atamalar</div>
-                        <div class="h5 mb-0 font-weight-bold">${stats.todayAssignments}</div>
+                        <div class="h5 mb-0 font-weight-bold"><%= stats.todayAssignments %></div>
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-calendar-check fa-2x opacity-75"></i>
@@ -39,7 +39,7 @@
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-uppercase mb-1">Bugünkü Mazeretler</div>
-                        <div class="h5 mb-0 font-weight-bold">${stats.todayExcuses}</div>
+                        <div class="h5 mb-0 font-weight-bold"><%= stats.todayExcuses %></div>
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-exclamation-triangle fa-2x opacity-75"></i>
@@ -55,7 +55,7 @@
                 <div class="row no-gutters align-items-center">
                     <div class="col mr-2">
                         <div class="text-xs font-weight-bold text-uppercase mb-1">Boş Vardiyalar</div>
-                        <div class="h5 mb-0 font-weight-bold">${stats.emptySlots}</div>
+                        <div class="h5 mb-0 font-weight-bold"><%= stats.emptySlots %></div>
                     </div>
                     <div class="col-auto">
                         <i class="fas fa-clock fa-2x opacity-75"></i>
@@ -73,7 +73,7 @@
             <div class="card-header py-3 d-flex flex-row align-items-center justify-content-between">
                 <h6 class="m-0 font-weight-bold text-primary">
                     <i class="fas fa-calendar-day me-2"></i>
-                    Bugünkü Takvim (${moment(today).format('DD.MM.YYYY')})
+                    Bugünkü Takvim (<%= moment(today).format('DD.MM.YYYY') %>)
                 </h6>
                 <a href="/calendar" class="btn btn-sm btn-primary">
                     <i class="fas fa-edit me-1"></i>
@@ -105,8 +105,8 @@
                                                 'slot5': '🌆'
                                             };
                                             %>
-                                            <span class="me-2">${slotEmojis[assignment.slot_id]}</span>
-                                            ${assignment.slot_name}
+                                            <span class="me-2"><%= slotEmojis[assignment.slot_id] %></span>
+                                            <%= assignment.slot_name %>
                                         </td>
                                         <td>
                                             <div class="d-flex align-items-center">
@@ -114,9 +114,9 @@
                                                     <i class="fas fa-user-circle fa-lg text-primary"></i>
                                                 </div>
                                                 <div>
-                                                    <strong>${assignment.username}</strong>
+                                                    <strong><%= assignment.username %></strong>
                                                     <% if (assignment.display_name) { %>
-                                                        <br><small class="text-muted">${assignment.display_name}</small>
+                                                        <br><small class="text-muted"><%= assignment.display_name %></small>
                                                     <% } %>
                                                 </div>
                                             </div>
@@ -204,10 +204,10 @@
                         <div class="border-left-warning shadow-sm p-3 mb-3">
                             <div class="d-flex align-items-center mb-2">
                                 <i class="fas fa-user text-warning me-2"></i>
-                                <strong>${excuse.username}</strong>
-                                <small class="text-muted ms-auto">${moment(excuse.responded_at).format('HH:mm')}</small>
+                                <strong><%= excuse.username %></strong>
+                                <small class="text-muted ms-auto"><%= moment(excuse.responded_at).format('HH:mm') %></small>
                             </div>
-                            <p class="mb-0 small">${excuse.excuse}</p>
+                            <p class="mb-0 small"><%= excuse.excuse %></p>
                         </div>
                     <% }); %>
                 <% } else { %>
@@ -271,7 +271,7 @@ const weeklyChart = new Chart(ctx, {
 
 // Hızlı işlem fonksiyonları
 async function createTodaySchedule() {
-    const today = '${today}';
+    const today = '<%= today %>';
     
     if (confirm('Bugün için yeni bir takvim oluşturmak istediğinizden emin misiniz?')) {
         try {
@@ -332,12 +332,12 @@ function sendAnnouncement() {
 document.addEventListener('DOMContentLoaded', function() {
     // Gerçek zamanlı güncellemeler için socket dinleyicileri
     socket.on('new_assignment', function(data) {
-        showNotification(\`Yeni atama: \${data.username} - \${data.slot_name}\`, 'success');
+        showNotification(`Yeni atama: ${data.username} - ${data.slot_name}`, 'success');
         setTimeout(() => location.reload(), 2000);
     });
     
     socket.on('new_excuse', function(data) {
-        showNotification(\`Yeni mazeret: \${data.username}\`, 'warning');
+        showNotification(`Yeni mazeret: ${data.username}`, 'warning');
         setTimeout(() => location.reload(), 2000);
     });
 });
