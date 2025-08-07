@@ -60,8 +60,10 @@ app.post('/api/login', async (req, res) => {
     if (username === adminUsername && password === adminPassword) {
         req.session.authenticated = true;
         req.session.username = username;
+        console.log(`📊 Admin Girişi - Kullanıcı: ${username}`);
         res.json({ success: true });
     } else {
+        console.log(`❌ Başarısız giriş denemesi - Kullanıcı: ${username}`);
         res.json({ success: false, error: 'Kullanıcı adı veya şifre hatalı!' });
     }
 });
