@@ -586,8 +586,28 @@
             }
         }
         
-        function sendSurvey() {
-            showNotification('Anket gönderme özelliği yakında eklenecek!', 'info');
+        async function sendSurvey() {
+            if (confirm(`${selectedDate} tarihi için anket göndermek istediğinizden emin misiniz?`)) {
+                try {
+                    const response = await fetch('/api/survey/send', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({ date: selectedDate, type: 'daily' })
+                    });
+                    
+                    const result = await response.json();
+                    
+                    if (result.success) {
+                        showNotification('Anket başarıyla gönderildi!', 'success');
+                    } else {
+                        showNotification('Hata: ' + result.error, 'error');
+                    }
+                } catch (error) {
+                    showNotification('Bağlantı hatası!', 'error');
+                }
+            }
         }
         
         function clearAllAssignments() {

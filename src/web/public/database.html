@@ -360,18 +360,27 @@
         // Veritabanı istatistiklerini yükle
         async function loadDatabaseStats() {
             try {
-                // Bu API endpoint'leri henüz yok, simüle edilecek
-                document.getElementById('db-size').textContent = '2.4 MB';
-                document.getElementById('last-backup').textContent = 'Hiç';
+                const response = await fetch('/api/database/stats');
+                const result = await response.json();
                 
-                // Tablo sayıları (API'den gelecek)
-                document.getElementById('moderators-count').textContent = '12';
-                document.getElementById('assignments-count').textContent = '156';
-                document.getElementById('excuses-count').textContent = '23';
-                document.getElementById('surveys-count').textContent = '45';
-                
+                if (result.success) {
+                    const data = result.data;
+                    
+                    // Veritabanı bilgileri
+                    document.getElementById('db-size').textContent = data.dbSize;
+                    document.getElementById('last-backup').textContent = data.lastBackup;
+                    
+                    // Tablo sayıları
+                    document.getElementById('moderators-count').textContent = data.moderators;
+                    document.getElementById('assignments-count').textContent = data.assignments;
+                    document.getElementById('excuses-count').textContent = data.excuses;
+                    document.getElementById('surveys-count').textContent = data.surveys;
+                } else {
+                    showNotification('İstatistikler yüklenemedi: ' + result.error, 'error');
+                }
             } catch (error) {
                 showNotification('İstatistikler yüklenemedi!', 'error');
+                console.error('Database stats error:', error);
             }
         }
         

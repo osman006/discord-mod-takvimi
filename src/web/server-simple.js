@@ -105,6 +105,85 @@ app.get('/api/dashboard', requireAuth, async (req, res) => {
     }
 });
 
+// Veritabanı istatistikleri API
+app.get('/api/database/stats', requireAuth, async (req, res) => {
+    try {
+        // Tablo sayılarını gerçek veritabanından al
+        const moderatorsCount = await database.get('SELECT COUNT(*) as count FROM moderators WHERE is_active = 1');
+        const assignmentsCount = await database.get('SELECT COUNT(*) as count FROM daily_assignments');
+        const excusesCount = await database.get('SELECT COUNT(*) as count FROM daily_excuses');
+        const surveysCount = await database.get('SELECT COUNT(*) as count FROM survey_responses');
+        const permanentShiftsCount = await database.get('SELECT COUNT(*) as count FROM permanent_shifts');
+        
+        // Veritabanı boyutunu hesapla (SQLite dosyası)
+        const fs = require('fs');
+        const path = require('path');
+        let dbSize = '0 MB';
+        try {
+            const dbPath = path.join(__dirname, '../../data/moderator_schedule.db');
+            const stats = fs.statSync(dbPath);
+            const fileSizeInBytes = stats.size;
+            const fileSizeInMB = (fileSizeInBytes / (1024 * 1024)).toFixed(2);
+            dbSize = `${fileSizeInMB} MB`;
+        } catch (error) {
+            console.log('Veritabanı dosya boyutu hesaplanamadı:', error.message);
+        }
+        
+        // Son yedek tarihi (şimdilik simüle)
+        const lastBackup = 'Hiç';
+        
+        res.json({
+            success: true,
+            data: {
+                moderators: moderatorsCount?.count || 0,
+                assignments: assignmentsCount?.count || 0,
+                excuses: excusesCount?.count || 0,
+                surveys: surveysCount?.count || 0,
+                permanentShifts: permanentShiftsCount?.count || 0,
+                dbSize,
+                lastBackup,
+                status: 'online'
+            }
+        });
+    } catch (error) {
+        console.error('Veritabanı istatistikleri hatası:', error);
+        res.json({ success: false, error: 'Veritabanı istatistikleri yüklenemedi' });
+    }
+});
+
+// Haftalık aktivite verisi API
+app.get('/api/dashboard/weekly', requireAuth, async (req, res) => {
+    try {
+        // Son 7 günün verilerini al
+        const weeklyData = [];
+        const today = new Date();
+        
+        for (let i = 6; i >= 0; i--) {
+            const date = new Date(today);
+            date.setDate(date.getDate() - i);
+            const dateStr = date.toISOString().split('T')[0];
+            
+            const assignments = await database.getDailyAssignments(dateStr);
+            const excuses = await database.getDailyExcuses(dateStr);
+            
+            weeklyData.push({
+                date: dateStr,
+                day: date.toLocaleDateString('tr-TR', { weekday: 'long' }),
+                assignments: assignments.length,
+                excuses: excuses.length
+            });
+        }
+        
+        res.json({
+            success: true,
+            data: weeklyData
+        });
+    } catch (error) {
+        console.error('Haftalık veri hatası:', error);
+        res.json({ success: false, error: 'Haftalık veriler yüklenemedi' });
+    }
+});
+
 // Takvim verileri API
 app.get('/api/calendar', requireAuth, async (req, res) => {
     try {
@@ -167,19 +246,44 @@ app.post('/api/schedule/create', requireAuth, async (req, res) => {
     try {
         const { date } = req.body;
         
-        // Basit takvim oluşturma - tüm moderatörlere anket gönder
-        const AutoScheduleManager = require('../utils/autoScheduleManager');
-        const autoSchedule = new AutoScheduleManager({ database, logger: console });
+        // Günlük takvim oluşturma işlemi
+        const DailyModManager = require('../utils/dailyModManager');
+        const dailyMod = new DailyModManager({ database, logger: console });
         
-        const result = await autoSchedule.createDailySchedule(date);
+        const result = await dailyMod.sendDailyScheduleSurvey(date);
         
         if (result.success) {
-            res.json({ success: true, message: 'Takvim oluşturuldu' });
+            res.json({ success: true, message: `${date} için takvim oluşturuldu ve anket gönderildi` });
         } else {
-            res.json({ success: false, error: result.error });
+            res.json({ success: false, error: result.error || 'Takvim oluşturulamadı' });
         }
     } catch (error) {
         console.error('Takvim oluşturma hatası:', error);
+        res.json({ success: false, error: error.message });
+    }
+});
+
+// Anket gönderme API
+app.post('/api/survey/send', requireAuth, async (req, res) => {
+    try {
+        const { date, type } = req.body;
+        
+        if (type === 'daily') {
+            const DailyModManager = require('../utils/dailyModManager');
+            const dailyMod = new DailyModManager({ database, logger: console });
+            
+            const result = await dailyMod.sendDailyScheduleSurvey(date);
+            
+            if (result.success) {
+                res.json({ success: true, message: `${date} için günlük anket gönderildi` });
+            } else {
+                res.json({ success: false, error: result.error || 'Anket gönderilemedi' });
+            }
+        } else {
+            res.json({ success: false, error: 'Geçersiz anket türü' });
+        }
+    } catch (error) {
+        console.error('Anket gönderme hatası:', error);
         res.json({ success: false, error: error.message });
     }
 });
