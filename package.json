@@ -8,7 +8,16 @@
     "dev": "nodemon src/index.js",
     "setup": "node src/setup.js",
     "web": "node src/web/server.js",
-    "dev-web": "nodemon src/web/server.js"
+    "dev-web": "nodemon src/web/server.js",
+    "pm2:start": "pm2 start ecosystem.config.js",
+    "pm2:stop": "pm2 stop ecosystem.config.js",
+    "pm2:restart": "pm2 restart ecosystem.config.js",
+    "pm2:reload": "pm2 reload ecosystem.config.js",
+    "pm2:delete": "pm2 delete ecosystem.config.js",
+    "pm2:status": "pm2 status",
+    "pm2:logs": "pm2 logs",
+    "pm2:monit": "pm2 monit",
+    "pm2:save": "pm2 save && pm2 startup"
   },
   "keywords": ["discord", "bot", "moderator", "schedule", "automation"],
   "author": "",
