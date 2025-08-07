@@ -974,6 +974,67 @@ class Database {
             });
         });
     }
+
+    // SQLite run metodu wrapper'ı
+    async run(sql, params = []) {
+        return new Promise((resolve, reject) => {
+            this.db.run(sql, params, function(err) {
+                if (err) {
+                    console.error('SQL run hatası:', err.message);
+                    reject(err);
+                } else {
+                    resolve({ lastID: this.lastID, changes: this.changes });
+                }
+            });
+        });
+    }
+
+    // SQLite get metodu wrapper'ı
+    async get(sql, params = []) {
+        return new Promise((resolve, reject) => {
+            this.db.get(sql, params, (err, row) => {
+                if (err) {
+                    console.error('SQL get hatası:', err.message);
+                    reject(err);
+                } else {
+                    resolve(row);
+                }
+            });
+        });
+    }
+
+    // SQLite all metodu wrapper'ı
+    async all(sql, params = []) {
+        return new Promise((resolve, reject) => {
+            this.db.all(sql, params, (err, rows) => {
+                if (err) {
+                    console.error('SQL all hatası:', err.message);
+                    reject(err);
+                } else {
+                    resolve(rows || []);
+                }
+            });
+        });
+    }
+
+    // Veritabanını kapat
+    async close() {
+        return new Promise((resolve, reject) => {
+            if (this.db) {
+                this.db.close((err) => {
+                    if (err) {
+                        console.error('Veritabanı kapatma hatası:', err.message);
+                        reject(err);
+                    } else {
+                        console.log('Veritabanı bağlantısı kapatıldı.');
+                        resolve();
+                    }
+                });
+            } else {
+                resolve();
+            }
+        });
+    }
 }
 
 module.exports = Database; 
